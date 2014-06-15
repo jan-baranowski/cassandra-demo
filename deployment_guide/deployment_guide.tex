@@ -13,6 +13,24 @@
 
 \section{Wstęp}
 
+Niniejszy dokument ma za zadanie przedstawić proces instalacji i konfiguracji serwera baz danych NoSQL \emph{Apache Cassandra} w środowisku rozproszonym.
+Na potrzeby demonstracji zakłada się że środowisko to będzie składać się z kilku węzłów połączonych siecią lokalną.
+
+Apache Cassandra jest serwerem baz danych NoSQL, początkowo rozwijanym przez Facebooka na potrzeby umożliwienia efektywnego przeszukiwania skrzynki odbiorczej. Obecnie Cassandra jest rozwijana przez Apache Foundation (jest jednym z projektów top-level) i stanowi podstawę dla zestawu narzędzi DataStax. 
+
+Cassandra powstała jako narzędzie mające w założeniu cechować się:
+\begin{itemize}
+\item[*] wysoką dostępnością (Cassandra jest określana jako zawsze zapisywalna baza danych)
+\item[*] niskim opóźnieniem wykonywanych operacji (ang. latency)
+\item[*] odpornością na awarie (możliwością replikacji danych, brakiem komponentów, których awaria może zdestabilizować system (ang. single points of failure))
+\item[*] możliwością regulacji kompromisu pomiędzy szybkością działania a odpornością na awarie i spójnością replik
+\item[*] relatywnie prostym modelem danych
+\end{itemize}
+
+Zarówno opisanie kolumnowego modelu danych wykorzystywanego w Cassandrze, jak i mechanizmów, dzięki którym spełnia ona założenia projektowe nie jest celem tego dokumentu. Autorzy mogą jedynie podać propozycje publikacji, które opisują wspomniane zagadnienia. Zarówno dla modelu danych, jak i budowy wewnętrznej Cassandry będzie to przede wszystkim dokumentacja udostępniana przez firmę DataStax ([link]). Model danych, przedstawiony z perspektywy osób pracujących z bazami relacyjnymi został doskonale (choć może zbyt obszernie) opisany w Cassandra - The Definitive Guide ([x]). Z kolei architektura Cassandry w dużym skrócie (choć zapewne w sposób wystarczający by służyć jako wstęp do tego dokumentu) została przedstawiona w prezentacji [x].
+
+Procedurę przygotowania klastra przedstawiono na przykładzie systemu operacyjnego Debian GNU/Linux 6, ponieważ uchodzi on za jedno z lepszych rozwiązań dla systemów serwerowych.
+
 \section{Wybór dystrybucji}
 
 \section{Instalacja}
