@@ -1,0 +1,8 @@
+Branche:
+* doc/deploy - deployment guide dla Cassandry 2.0
+* doc/internals - HOWTO dla wyświetlania wewnętrznych ustawień Cassandry
+* demo/cql - demonstracja działania konektorów DataStax
+* demo/hector - demonstracja działania thriftowego klienta dla Cassandry, np. Hector
+
+Dostęp do maszyn wirtualnych zawierających klaster Cassandry:
+* OVA do uruchomienia na własnym sprzęcie: http://bbsnet.pl/debian-cluster.ova
