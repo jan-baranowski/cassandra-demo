@@ -266,11 +266,11 @@ $ cassandra -f | tee /tmp/cassandra_testrun.log
 \subsection{Pliki konfiguracyjne}\label{subsec:config_files}
 
 Role podstawowych plików konfiguracyjnych zostały przedstawione w~punkcie \ref{subsec:config_postinst}.
-Tutaj (w~tabeli \ref{tab:config_options}) zostaną opisane parametry konfiguracyjne (z \texttt{/etc/cassandra/cassandra.yaml}), których wartości powinny zostać świadomie dobrane przed uruchomieniem pojedynczego węzła.
+W~tabeli \ref{tab:config_options} zostaną opisane parametry konfiguracyjne (z \texttt{/etc/cassandra/cassandra.yaml}), których wartości powinny zostać świadomie dobrane przed uruchomieniem pojedynczego węzła.
 
 Konfigurację węzła ułatwia sam plik konfiguracyjny \emph{Cassandry}, zawierający obszerne komentarze.
 
-\begin{table}[hhh]
+\begin{table}[ht]
 \caption{podstawowe parametry konfiguracyjne \emph{Cassandry} (w~\texttt{/etc/cassandra/cassandra.yaml}).}
 \begin{tabular}{|r|c|p{7.5cm}|}
 \hline 
@@ -278,6 +278,10 @@ Konfigurację węzła ułatwia sam plik konfiguracyjny \emph{Cassandry}, zawiera
 \hline
 \hline
 \texttt{cluster\_name} & 10 & nazwa klastra, którego ten węzeł jest członkiem\\
+\hline
+\texttt{authenticator} & 64 & Klasa implementująca mechanizm uwierzytelniania. Do wyboru: \emph{AllowAllAuthenticator} i~\emph{PasswordAuthenticator}. W~drugim przypadku nazwy użytkowników i~hasła przechowywane są wewnątrz bazy danych w~przestrzeni kluczy \texttt{system\_auth}.\\
+\hline
+\texttt{auhorizer} & 73 & Klasa implementująca mechanizm sprawdzania uprawnień przy dostępie do danych (autoryzację). Do wyboru \emph{AllowAllAuthorizer} i \emph{CassandraAuthorizer}. W~drugim przypadku uprawnienia przechowywane są wewnątrz bazy danych w~przestrzeni kluczy \texttt{system\_auth}.\\
 \hline
 \texttt{seed\_provider/parameters/seeds} & 192 & Węzeł \emph{Cassandry} nie odkrywa innych węzłów automatycznie, stąd dla algorytmu plotkowania wymagana jest lista początkowych "punktów kontaktowych". Oczywiście punkty powinny być tak dobrane by nie dopuścić do partycjonowania klastra.\\
 \hline
@@ -372,7 +376,7 @@ Każdy węzeł powinien przyjmować od użytkowników zapytania i odpowiadać na
 
 Jednak by zapewnić stabilne działanie klastra przez dłuższy okres wymagane są dodatkowe czynności administracyjne.
 
-\subsubsection{Synchronizacja zegarów}
+\subsubsection{Synchronizacja zegarów}\label{subsec:cluster_misc_ntp}
 
 Dokumentacja Cassandry udostępniona przez Apache Software Foundation wspomina o tym, że do oceny czy propagowane do węzłów zmiany schematu (np. dodanie nowej rodziny kolumn) są przedawnione (zatem powinny być zignorowane) wykorzystywany jest lokalny zegar czasu rzeczywistego (RTC).
 
@@ -397,9 +401,201 @@ xpscolka.of.pl   80.50.231.226    2 u   35  256  377   13.027  190.872  26.614
 $
 \end{lstlisting}
 
-\subsubsection{Czyszczenie}
+\subsubsection{Czyszczenie}\label{subsec:cluster_misc_distdeletes}
 
-\subsubsection{Konfiguracja uwierzytelniania}
+Cassandra używa trzech mechanizmów w celu zapewnienia ostatecznej spójności replik. Są to kolejno:
+\begin{enumerate}
+\item[1)] mechanizm read-repair pozwalający uaktualnić te repliki, które zostaną wyznaczone jako nieaktualne (a dzieje się to w momencie gdy pojedynczy węzeł zbierze dostatecznie dużo danych z różnych replik, tj. przy odczycie z dostatecznie wysokim poziomem spójności).
+\item[2)] mechanizm HintedHandoff uprawniający punkt kontaktowy w klastrze do przechowania uaktualnienia do momentu gdy jego cel będzie osiągalny (tj. sam zostanie naprawiony lub połączenie z nim zacznie działać)
+\item[3)] mechanizm AntiEntropy czyli wymuszona przez administratora synchronizacja koordynatora z wszystkimi koordynowanymi replikami
+\end{enumerate}
+
+Spośród nich tylko trzeci mechanizm wymaga interwencji administratora.
+
+Cassandra pozwala na usuwanie danych z bazy w sposób pod kątem zachowania spójności podobny do przeprowadzania zapisów. Jest to o tyle kłopotliwe, że podczas synchronizacji dane, które zostały usunięte mogą być potraktowane jako brakujące uaktualnienia. W efekcie dane raz usunięte mogą pojawić się ponownie nawet na tym samym węźle.
+
+By temu zapobiec Cassandra zamiast faktycznie usuwać dane, oznacza je jako usunięte za pomocą specjalnej wartości, tzw. tombstona.
+To z kolei powoduje problem przyrastania danych nawet podczas ich usuwania.
+
+By zapobiec i temu, tobstony w Cassandrze są przechowywane przez określony czas (definiowany podczas tworzenia przestrzeni kluczy, przy użyciu parametru gc\_grace\_seconds, domyślnie 10 dni \cite{distributeddeletes})
+
+Stąd zaleca się wymuszenie synchronizacji replik (czyli uruchomienie mechanizmu AntiEntropy) częściej niż wynosi najmniejsza wartość gc\_grace\_seconds dla przestrzeni kluczy przechowywanej w węźle.
+
+\bigskip
+
+\noindent\textbf{UWAGA!} Problem nie będzie występował jeżeli aplikacja korzystająca z Cassandry nie zleca usunięć wierszy wcale.
+
+\bigskip
+
+\noindent\textbf{UWAGA!} Z drugiej strony pełna synchronizacja węzła z replikami jest kosztowna. Konstrukcja struktury Merkle Tree, wykorzystywanej do obliczenia różnic pomiędzy replikami wymaga odczytu wszystkich danych przechowywanych w węźle (w tym --- tych zrzuconych na dysk). Należy więc ustalić kompromis pomiędzy obciążeniem systemu tombstonami a obciążeniem go procedurą synchronizacji.
+
+Mechanizm AntiEntropy uruchamia się wymuszając pełną naprawę węzła narzędziem nodetool:
+
+\begin{lstlisting}[style=bash, caption={naprawa węzła poprzez uruchomienie mechanizmu \emph{AntiEntropy}}]
+$ nodetool -host localhost repair
+[2014-06-17 21:47:55,488] Nothing to repair for keyspace 'system'
+[2014-06-17 21:47:55,546] Starting repair command 2, repairing 474
+ranges for keyspace system_traces
+[2014-06-17 22:01:37,033] Repair session 0a4463e0-f669-11e3-8ad4-251897e18719 for
+range (-2577486857218927215,-2576033184180305603] finished
+[2014-06-17 22:01:37,038] Repair session 0b595650-f669-11e3-8ad4-251897e18719 for
+range (-1096394548677781591,-1069256055695448190] finished
+
+[...]
+
+[2014-06-17 22:01:38,931] Repair session efaa5290-f66a-11e3-8ad4-251897e18719 for
+range (4183239765725363167,4233658233454255946] finished
+[2014-06-17 22:01:38,932] Repair session f0bc5ed0-f66a-11e3-8ad4-251897e18719 for
+range (-767591973226673249,-759782651038439858] finished
+[2014-06-17 22:01:38,932] Repair session f1bc42a0-f66a-11e3-8ad4-251897e18719 for
+range (1226781783220621999,1238805897799045860] finished
+[2014-06-17 22:01:38,947] Repair session f2bee590-f66a-11e3-8ad4-251897e18719 for
+range (7669322402280617470,7674157004615966047] finished
+[2014-06-17 22:01:38,947] Repair command 2 finished
+\end{lstlisting}
+
+Dla zastosowań, w których wymagany jest ciągły nadzór administracyjny jest oczywiście możliwe wywoływanie polecenia nodetool repir ręcznie.
+Na potrzeby tego dokumentu przyjęto, że naprawy odbywać się będą tak, by tylko jeden węzeł był jednocześnie obciążany.
+Do wywoływania polecenia nodetool repair użyto crona (dla uproszczenia pominięto kwestie związane z uruchamianiem zadania poprzez dedykowanego użytkownika):
+
+\begin{lstlisting}[style=bash, caption={konfiguracja okresowego naprawiania klastra}]
+$ echo "#!/bin/bash" > /root/repair-cassandra.sh
+$ echo "nodetool -host localhost -p 7199 repair --partitioner-range" \ 
+> >> /root/repair-cassandra.sh
+
+$ chmod u+x /root/repair-cassandra.sh
+
+$ crontab -e
+
+  GNU nano 2.2.6                     File: /tmp/crontab.M3Zyaw/crontab                                        Modified
+
+# Edit this file to introduce tasks to be run by cron.
+#
+# Each task to run has to be defined through a single line
+# indicating with different fields when the task will be run
+# and what command to run for the task
+#
+# To define the time you can provide concrete values for
+# minute (m), hour (h), day of month (dom), month (mon),
+# and day of week (dow) or use '*' in these fields (for 'any').#
+# Notice that tasks will be started based on the cron's system
+# daemon's notion of time and timezones.
+#
+# Output of the crontab jobs (including errors) is sent through
+# email to the user the crontab file belongs to (unless redirected).
+#
+# For example, you can run a backup of all your user accounts
+# at 5 a.m every week with:
+# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+#
+# For more information see the manual pages of crontab(5) and cron(8)
+#
+# m h  dom mon dow   command
+0 3 * * <node_id> /root/repair-cassandra.sh
+
+
+^G Get Help         ^O WriteOut         ^R Read File        ^Y Prev Page        ^K Cut Text         ^C Cur Pos
+^X Exit             ^J Justify          ^W Where Is         ^V Next Page        ^U UnCut Text       ^T To Spell
+
+$ ^X
+
+$ crontab -u root -l
+
+# Edit this file to introduce tasks to be run by cron.
+#
+# Each task to run has to be defined through a single line
+# indicating with different fields when the task will be run
+# and what command to run for the task
+#
+# To define the time you can provide concrete values for
+# minute (m), hour (h), day of month (dom), month (mon),
+# and day of week (dow) or use '*' in these fields (for 'any').#
+# Notice that tasks will be started based on the cron's system
+# daemon's notion of time and timezones.
+#
+# Output of the crontab jobs (including errors) is sent through
+# email to the user the crontab file belongs to (unless redirected).
+#
+# For example, you can run a backup of all your user accounts
+# at 5 a.m every week with:
+# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+#
+# For more information see the manual pages of crontab(5) and cron(8)
+#
+# m h  dom mon dow   command
+1 1 * * 1 /root/repair-cassandra.sh
+
+\end{lstlisting}
+
+\bigskip
+
+\noindent\textbf{UWAGA!} Można dodatkowo zredukować obciążenie węzła podając przy naprawie parametr --partitioner-range. Spowoduje to naprawę jedynie tych zakresów kluczy dla których węzeł jest mater repliką (pomijając zakresy ulokowane w węźle przez mechanizm replikacji).
+
+\subsubsection{Konfiguracja uwierzytelniania}\label{subsec:cluster_misc_auth}
+
+Włączenie uwierzytelniania klienta wymaga w pierwszej kolejności zmiany mechanizmu uwierzytelniania w pliku konfiguracyjnym /etc/cassandra/cassandra.yaml.
+Domyślnie Cassandra używa implementacji AllowAllAuthenticator, który pozwala każdemu na dostęp do klastra, jednocześnie blokując wykonywania jakichkolwiek operacji na zbiorze użytkowników:
+
+\pagebreak
+
+\begin{lstlisting}[style=bash, caption={wypisanie listy zdefiniowanych użytkowników przy wyłączonym uwierzytelnianiu}]
+$ cqlsh
+Connected to 0AND1AND2CLUSTER at localhost:9160.
+[cqlsh 4.1.1 | Cassandra 2.0.8 | CQL spec 3.1.1 | Thrift protocol 19.39.0]
+Use HELP for help.
+cqlsh> LIST USERS;
+Bad Request: You have to be logged in and not anonymous to perform this request
+cqlsh>
+\end{lstlisting}
+
+Zmieniając parametr \texttt{authenticator} na PasswordAuthenticator wyłącza się możliwość anonimowego logowania do klastra, zyskują s w to miejsce możliwość zarządzania użytkownikami. Domyślny użytkownik administracyjny ma przypisany login cassandra i hasło cassandra.
+Podając te dane przy logowaniu zyskujemy możliwość zmiany domyślnego hasła i utworzenia standardowego użytkownika:
+
+\begin{lstlisting}[style=bash, caption={włączenie uwierzytelniania przy dostępie do klastra przez \texttt{cqlsh}}]
+$ cqlsh
+Connection error: Bad Request: You have not logged in
+
+$ cqlsh -u cassandra -p cassandra
+Connected to 0AND1AND2CLUSTER at localhost:9160.
+[cqlsh 4.1.1 | Cassandra 2.0.8 | CQL spec 3.1.1 | Thrift protocol 19.39.0]
+Use HELP for help.
+cqlsh> LIST USERS;
+
+ name      | super
+-----------+-------
+ cassandra |  True
+
+(1 rows)
+
+cqlsh>
+\end{lstlisting}
+
+\begin{lstlisting}[style=bash, caption={konfiguracja kont użytkowników}]
+$ cqlsh -u cassandra -p cassandra
+Connected to 0AND1AND2CLUSTER at localhost:9160.
+[cqlsh 4.1.1 | Cassandra 2.0.8 | CQL spec 3.1.1 | Thrift protocol 19.39.0]
+Use HELP for help.
+cqlsh> ALTER USER cassandra WITH PASSWORD 'balcerowiczmusiodejsc';
+cqlsh> CREATE USER scott WITH PASSWORD 'tiger' NOSUPERUSER;
+cqlsh> quit;
+
+$ cqlsh -u scott -p tiger;
+Connected to 0AND1AND2CLUSTER at localhost:9160.
+[cqlsh 4.1.1 | Cassandra 2.0.8 | CQL spec 3.1.1 | Thrift protocol 19.39.0]
+Use HELP for help.
+cqlsh> LIST USERS;
+
+ name      | super
+-----------+-------
+     scott | False
+ cassandra |  True
+
+(2 rows)
+
+cqlsh>
+\end{lstlisting}
+
+Oczywiście włączenie uwierzytelniania ma wpływ na wszystkie kanały komunikacji z klastrem, w tym na drivery DataStax.
 
 \section{Zarządzanie klastrem}
 
@@ -428,28 +624,33 @@ O'Reilly 2010
 \url{http://www.datastax.com/},\\
 dostęp 17 czerwca 2014 r.
 
-\bibitem[4]{downloading_oracle_java}
+\bibitem[4]{distributeddeletes}
+\emph{DistributedDeletes, Cassandra Wiki},\\
+\url{http://wiki.apache.org/cassandra/DistributedDeletes}\\
+dostęp 17 czerwca 2014 r.
+
+\bibitem[5]{downloading_oracle_java}
 Daniel Stavrovski,\\
 \emph{Installing Oracle JAVA 7 on Debian Wheezy},\\
 \url{http://d.stavrovski.net/blog/post/installing-oracle-java-7-on-debian-wheezy},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[5]{installing_oracle_java_on_debian}
+\bibitem[6]{installing_oracle_java_on_debian}
 \emph{Java/Sun, Debian Wiki},\\
 \url{https://wiki.debian.org/Java/Sun},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[6]{mysql_connectors}
+\bibitem[7]{mysql_connectors}
 \emph{MySQL Connectors},\\
 \url{http://www.mysql.com/products/connector/},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[7]{datastax_guides}
+\bibitem[8]{datastax_guides}
 \emph{NoSQL Apache Cassandra Documentation},\\
 \url{http://planetcassandra.org/documentation/},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[8]{whydatastax}
+\bibitem[9]{whydatastax}
 \emph{Why DataStax?},\\
 \url{http://www.datastax.com/why-datastax}\\
 dostęp 16 czerwca 2014 r.
