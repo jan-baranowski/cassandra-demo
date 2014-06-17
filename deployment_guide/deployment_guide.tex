@@ -335,19 +335,20 @@ UN  127.0.0.1  98.76 KB   256     100.0%            d85efd66-29fb-46d7-b824-a4cc
 Zakładając, że odpowiednie węzły spełniają następujące warunki:
 
 \begin{itemize}
-\item nazwa klastra w plikach konfiguracyjnych wszystkich węzłów jest taka sama
-\item agent algorytmu plotkującego nasłuchuje na adresie IP interfejsu osiągalnego z sieci lokalnej (parametr \texttt{listen\_address})
-\item początkowe punkty kontaktowe są zdefiniowane tak by każdy węzeł mógł ostatecznie dowiedzieć się o wszystkich pozostałych
+\item nazwa klastra w~plikach konfiguracyjnych wszystkich węzłów jest taka sama
+\item agent algorytmu plotkującego nasłuchuje na adresie IP interfejsu osiągalnego z~sieci lokalnej (parametr \texttt{listen\_address})
+\item początkowe punkty kontaktowe są zdefiniowane tak by każdy węzeł mógł ostatecznie dowiedzieć się o~wszystkich pozostałych
 \end{itemize}
 
-by połączyć je w klaster wystarczy jedynie uruchomić na nich usługę \texttt{cassandra}.
+by połączyć je w~klaster wystarczy jedynie uruchomić na nich usługę \texttt{cassandra}.
 
 \subsection{Weryfikacja konfiguracji klastra}\label{subsec:cluster_verifying}
 
 Połączenia między węzłami klastra mają charakter dwukierunkowy.
-Oznacza to, że jeżeli węzeł nie jest widoczny w sieci, to (o ile działa) sam także nie widzi jej pozostałej części.
+Oznacza to, że jeżeli węzeł nie jest widoczny w~sieci, to (o~ile działa) sam także nie widzi pozostałych węzłów.
 
-Stąd najprostszym sposobem na sprawdzenie czy wszystkie węzły zostały odpowiednio połączone jest sprawdzenie jaki stan klastra widzi dowolny z jego węzłów. Informację tę może podać narzędzie \texttt{nodetool}.
+Stąd najprostszym sposobem na sprawdzenie czy wszystkie węzły zostały odpowiednio połączone jest sprawdzenie jaki stan klastra widzi dowolny z~jego węzłów.
+Informację tę może podać narzędzie \texttt{nodetool}.
 
 \begin{lstlisting}[style=bash, caption={sprawdzanie stanu klastra po dołączeniu węzłów}]
 $ nodetool -host localhost -p 7199 status
@@ -362,29 +363,32 @@ UN  10.0.0.100  63.48 KB   256     31.0%  c45900c6-6866-4b5a-b32b-cc0158bca524  
 UN  10.0.0.102  63.5 KB    256     33.7%  4d598617-7f3c-480c-9310-f0eae90ef96b  NODE1AND2
 \end{lstlisting}
 
-Jeżeli jeden z węzłów nie dołączył do klastra lub znajduje się w stanie \texttt{DOWN}, należy sprawdzić czy uruchomił się prawidłowo, czy log nie zawiera informacji o błędzie sieci lub agenta algorytmu plotkującego (w pewnych sytuacjach taki błąd nie powstrzymuje usługi przed uruchomieniem), wreszcie czy adres IP dla agenta i początkowe punkty kontaktowe zostały poprawnie zdefiniowane w pliku konfiguracyjnym.
+Jeżeli jeden z~węzłów nie dołączył do klastra lub znajduje się w stanie \texttt{DOWN}, należy sprawdzić czy uruchomił się prawidłowo, czy log nie zawiera informacji o~błędzie sieci lub agenta algorytmu plotkującego (w~pewnych sytuacjach taki błąd nie powstrzymuje usługi przed uruchomieniem), wreszcie czy adres IP dla agenta i~początkowe punkty kontaktowe zostały poprawnie zdefiniowane w~pliku konfiguracyjnym.
 
 \bigskip
 
-\noindent\textbf{UWAGA!} Z zawartości pliku konfiguracyjnego \texttt{/etc/cassandra/cassandra.yaml} można wywnioskować, że zawsze jednym z punktów kontaktowych powinien być localhost.
+\noindent\textbf{UWAGA!} Z~zawartości pliku konfiguracyjnego \texttt{/etc/cassandra/cassandra.yaml} można wnioskować, że zawsze jednym z~punktów kontaktowych powinien być \texttt{localhost}.
 Jako adres IP punktu nie powinien być jednak podawany adres 127.0.0.1, lecz adres interfejsu na którym nasłuchuje agent (parametr \texttt{listen\_address}).
 
 \subsection{Działania dodatkowe}\label{subsec:cluster_misc}
 
-W obecnym stanie klaster powinien już działać prawidłowo.
-Każdy węzeł powinien przyjmować od użytkowników zapytania i odpowiadać na nie w sposób adekwatny do stanu klastra.
+W~obecnym stanie klaster powinien już działać prawidłowo.
+Każdy węzeł powinien przyjmować od użytkowników zapytania i~odpowiadać na nie w~sposób adekwatny do stanu klastra.
 
 Jednak by zapewnić stabilne działanie klastra przez dłuższy okres wymagane są dodatkowe czynności administracyjne.
 
 \subsubsection{Synchronizacja zegarów}\label{subsec:cluster_misc_ntp}
 
-Dokumentacja Cassandry udostępniona przez Apache Software Foundation wspomina o tym, że do oceny czy propagowane do węzłów zmiany schematu (np. dodanie nowej rodziny kolumn) są przedawnione (zatem powinny być zignorowane) wykorzystywany jest lokalny zegar czasu rzeczywistego (RTC).
+Dokumentacja \emph{Cassandry} udostępniona przez \emph{Apache Software Foundation} wspomina o~tym, że do oceny czy propagowane do węzłów zmiany schematu (np. dodanie nowej rodziny kolumn) są przedawnione (zatem powinny być zignorowane) wykorzystywany jest lokalny zegar czasu rzeczywistego (\emph{RTC}).
 
-By zapewnić poprawność propagacji takich zmian należy synchronizować zegary węzłów np. poprzez protokół NTP.
+By zapewnić poprawność propagacji takich zmian należy okresowo synchronizować zegary węzłów np. poprzez protokół \emph{NTP}.
 
-W systemie Debian funkcję synchronizacji czasu systemowego z serwerem NTP dostarcza pakiet \texttt{ntp}. Pakiet ten jest rekomendowany do instalacji przez pakiet \texttt{cassandra}. Po instalacji automatycznie zostaje uruchomiona usługa \texttt{ntp} bazująca na puli serwerów dostarczonych razem z pakietem. Należy sprawdzić czy usługa ta jest zainstalowana, uruchomiona i czy serwery NTP są dostępne:
+W~systemie \emph{Debian} funkcję synchronizacji czasu systemowego z~serwerem NTP dostarcza pakiet \texttt{ntp}.
+Pakiet ten jest rekomendowany do instalacji przez pakiet \texttt{cassandra}.
+Po instalacji \texttt{ntp} automatycznie zostaje uruchomiona usługa \texttt{ntp} bazująca na puli serwerów dostarczonych razem z~pakietem.
+Należy sprawdzić czy usługa ta jest zainstalowana, uruchomiona i~czy serwery \emph{NTP} są dostępne:
 
-\begin{lstlisting}[style=bash, caption={weryfikacja poprawności działania klienta NTP}]
+\begin{lstlisting}[style=bash, caption={weryfikacja poprawności działania klienta \emph{NTP}}]
 $ dpkg -l | grep ntp
 ii  ntp                                  1:4.2.6.p5+dfsg-2             i386         Network Time Protocol daemon and utility programs
 $
@@ -403,33 +407,39 @@ $
 
 \subsubsection{Czyszczenie}\label{subsec:cluster_misc_distdeletes}
 
-Cassandra używa trzech mechanizmów w celu zapewnienia ostatecznej spójności replik. Są to kolejno:
+\emph{Cassandra} używa trzech mechanizmów w~celu zapewnienia ostatecznej spójności replik.
+Są to kolejno:
+
 \begin{enumerate}
-\item[1)] mechanizm read-repair pozwalający uaktualnić te repliki, które zostaną wyznaczone jako nieaktualne (a dzieje się to w momencie gdy pojedynczy węzeł zbierze dostatecznie dużo danych z różnych replik, tj. przy odczycie z dostatecznie wysokim poziomem spójności).
-\item[2)] mechanizm HintedHandoff uprawniający punkt kontaktowy w klastrze do przechowania uaktualnienia do momentu gdy jego cel będzie osiągalny (tj. sam zostanie naprawiony lub połączenie z nim zacznie działać)
-\item[3)] mechanizm AntiEntropy czyli wymuszona przez administratora synchronizacja koordynatora z wszystkimi koordynowanymi replikami
+\item[1)] mechanizm \emph{read-repair} pozwalający uaktualnić te repliki, które zostaną wyznaczone jako nieaktualne (a~dzieje się to w momencie gdy pojedynczy węzeł zbierze dostatecznie dużo danych z~różnych replik, tj. przy odczycie z~dostatecznie wysokim poziomem spójności).
+\item[2)] mechanizm \emph{HintedHandoff} uprawniający punkt kontaktowy w~klastrze do przechowania uaktualnienia do momentu gdy jego cel (o~ile nie jest nim sam punkt kontaktowy) będzie osiągalny (tj. sam zostanie naprawiony lub połączenie z~nim zacznie działać)
+\item[3)] mechanizm \emph{AntiEntropy} czyli wymuszona przez administratora synchronizacja koordynatora z~wszystkimi zależnymi replikami
 \end{enumerate}
 
 Spośród nich tylko trzeci mechanizm wymaga interwencji administratora.
 
-Cassandra pozwala na usuwanie danych z bazy w sposób pod kątem zachowania spójności podobny do przeprowadzania zapisów. Jest to o tyle kłopotliwe, że podczas synchronizacji dane, które zostały usunięte mogą być potraktowane jako brakujące uaktualnienia. W efekcie dane raz usunięte mogą pojawić się ponownie nawet na tym samym węźle.
+\emph{Cassandra} pozwala na usuwanie danych z~bazy w~sposób pod kątem zachowania spójności podobny do przeprowadzania zapisów.
+Jest to o~tyle kłopotliwe, że podczas synchronizacji dane, które zostały usunięte mogą być potraktowane jako brakujące uaktualnienia.
+W~efekcie dane raz usunięte mogą pojawić się ponownie nawet na tym samym węźle.
 
-By temu zapobiec Cassandra zamiast faktycznie usuwać dane, oznacza je jako usunięte za pomocą specjalnej wartości, tzw. tombstona.
+By temu zapobiec \emph{Cassandra} zamiast faktycznie usuwać dane, oznacza je jako usunięte za pomocą specjalnej wartości, tzw. \emph{tombstone}.
 To z kolei powoduje problem przyrastania danych nawet podczas ich usuwania.
 
-By zapobiec i temu, tobstony w Cassandrze są przechowywane przez określony czas (definiowany podczas tworzenia przestrzeni kluczy, przy użyciu parametru gc\_grace\_seconds, domyślnie 10 dni \cite{distributeddeletes})
+By zapobiec i~temu, \emph{tombstony} w~\emph{Cassandrze} są przechowywane przez określony czas (definiowany podczas tworzenia przestrzeni kluczy, poprzez parametr \texttt{gc\_grace\_seconds}, domyślnie 10 dni \cite{distributeddeletes}).
 
-Stąd zaleca się wymuszenie synchronizacji replik (czyli uruchomienie mechanizmu AntiEntropy) częściej niż wynosi najmniejsza wartość gc\_grace\_seconds dla przestrzeni kluczy przechowywanej w węźle.
-
-\bigskip
-
-\noindent\textbf{UWAGA!} Problem nie będzie występował jeżeli aplikacja korzystająca z Cassandry nie zleca usunięć wierszy wcale.
+Stąd zaleca się wymuszenie synchronizacji replik (czyli uruchomienie mechanizmu \emph{AntiEntropy}) częściej niż wynosi najmniejsza wartość \texttt{gc\_grace\_seconds} dla przestrzeni kluczy przechowywanych w~węźle.
 
 \bigskip
 
-\noindent\textbf{UWAGA!} Z drugiej strony pełna synchronizacja węzła z replikami jest kosztowna. Konstrukcja struktury Merkle Tree, wykorzystywanej do obliczenia różnic pomiędzy replikami wymaga odczytu wszystkich danych przechowywanych w węźle (w tym --- tych zrzuconych na dysk). Należy więc ustalić kompromis pomiędzy obciążeniem systemu tombstonami a obciążeniem go procedurą synchronizacji.
+\noindent\textbf{UWAGA!} Problem nie będzie występował jeżeli aplikacja korzystająca z~\emph{Cassandry} wcale nie zleca usunięć wierszy.
 
-Mechanizm AntiEntropy uruchamia się wymuszając pełną naprawę węzła narzędziem nodetool:
+\bigskip
+
+\noindent\textbf{UWAGA!} Z~drugiej strony pełna synchronizacja węzła z~replikami jest kosztowna.
+Konstrukcja struktury \emph{Merkle Tree}, wykorzystywanej do obliczenia różnic pomiędzy replikami wymaga odczytu wszystkich danych przechowywanych w~węźle (w~tym~---~tych zrzuconych na dysk).
+Należy więc ustalić kompromis pomiędzy obciążeniem systemu \emph{tombstonami} a~obciążeniem go procedurą synchronizacji.
+
+Mechanizm \emph{AntiEntropy} uruchamia się wymuszając pełną naprawę węzła narzędziem \texttt{nodetool}:
 
 \begin{lstlisting}[style=bash, caption={naprawa węzła poprzez uruchomienie mechanizmu \emph{AntiEntropy}}]
 $ nodetool -host localhost repair
@@ -454,9 +464,9 @@ range (7669322402280617470,7674157004615966047] finished
 [2014-06-17 22:01:38,947] Repair command 2 finished
 \end{lstlisting}
 
-Dla zastosowań, w których wymagany jest ciągły nadzór administracyjny jest oczywiście możliwe wywoływanie polecenia nodetool repir ręcznie.
+Dla zastosowań, w~których wymagany jest ciągły nadzór administracyjny nad klastrem jest oczywiście możliwe wywoływanie polecenia \texttt{nodetool repir} ręcznie.
 Na potrzeby tego dokumentu przyjęto, że naprawy odbywać się będą tak, by tylko jeden węzeł był jednocześnie obciążany.
-Do wywoływania polecenia nodetool repair użyto crona (dla uproszczenia pominięto kwestie związane z uruchamianiem zadania poprzez dedykowanego użytkownika):
+Do wywoływania polecenia \texttt{nodetool repair} użyto \texttt{crona} (dla uproszczenia pominięto kwestie związane z~uruchamianiem zadania poprzez dedykowanego użytkownika):
 
 \begin{lstlisting}[style=bash, caption={konfiguracja okresowego naprawiania klastra}]
 $ echo "#!/bin/bash" > /root/repair-cassandra.sh
@@ -523,20 +533,22 @@ $ crontab -u root -l
 # For more information see the manual pages of crontab(5) and cron(8)
 #
 # m h  dom mon dow   command
-1 1 * * 1 /root/repair-cassandra.sh
+1 1 * * 1 /root/repair-cassandra.sh # repairing one node per day of week;
+                                    # should be enough for 3 nodes in cluster
 
 \end{lstlisting}
 
 \bigskip
 
-\noindent\textbf{UWAGA!} Można dodatkowo zredukować obciążenie węzła podając przy naprawie parametr --partitioner-range. Spowoduje to naprawę jedynie tych zakresów kluczy dla których węzeł jest mater repliką (pomijając zakresy ulokowane w węźle przez mechanizm replikacji).
+\noindent\textbf{UWAGA!} Można dodatkowo zredukować obciążenie węzła podając przy naprawie parametr \texttt{--partitioner-range}.
+Spowoduje to naprawę jedynie tych zakresów kluczy dla których węzeł jest \emph{master replik}ą (pomijając zakresy ulokowane w~węźle przez mechanizm replikacji~---~standardowe repliki).
+
+\pagebreak
 
 \subsubsection{Konfiguracja uwierzytelniania}\label{subsec:cluster_misc_auth}
 
-Włączenie uwierzytelniania klienta wymaga w pierwszej kolejności zmiany mechanizmu uwierzytelniania w pliku konfiguracyjnym /etc/cassandra/cassandra.yaml.
-Domyślnie Cassandra używa implementacji AllowAllAuthenticator, który pozwala każdemu na dostęp do klastra, jednocześnie blokując wykonywania jakichkolwiek operacji na zbiorze użytkowników:
-
-\pagebreak
+Włączenie uwierzytelniania klienta wymaga w~pierwszej kolejności zmiany mechanizmu uwierzytelniania w~pliku konfiguracyjnym \texttt{/etc/cassandra/cassandra.yaml}.
+Domyślnie \emph{Cassandra} używa implementacji \emph{AllowAllAuthenticator}, który pozwala każdemu na dostęp do klastra, jednocześnie blokując wykonywania jakichkolwiek operacji na zbiorze użytkowników:
 
 \begin{lstlisting}[style=bash, caption={wypisanie listy zdefiniowanych użytkowników przy wyłączonym uwierzytelnianiu}]
 $ cqlsh
@@ -548,8 +560,9 @@ Bad Request: You have to be logged in and not anonymous to perform this request
 cqlsh>
 \end{lstlisting}
 
-Zmieniając parametr \texttt{authenticator} na PasswordAuthenticator wyłącza się możliwość anonimowego logowania do klastra, zyskują s w to miejsce możliwość zarządzania użytkownikami. Domyślny użytkownik administracyjny ma przypisany login cassandra i hasło cassandra.
-Podając te dane przy logowaniu zyskujemy możliwość zmiany domyślnego hasła i utworzenia standardowego użytkownika:
+Zmieniając parametr \texttt{authenticator} na \emph{PasswordAuthenticator} wyłącza się możliwość anonimowego logowania do klastra, zyskując w~to miejsce możliwość zarządzania użytkownikami.
+Domyślny użytkownik administracyjny ma przypisany login \texttt{cassandra} i~hasło \texttt{cassandra}.
+Podając te dane przy logowaniu zyskujemy możliwość zmiany domyślnego hasła i~utworzenia standardowego użytkownika:
 
 \begin{lstlisting}[style=bash, caption={włączenie uwierzytelniania przy dostępie do klastra przez \texttt{cqlsh}}]
 $ cqlsh
@@ -578,7 +591,11 @@ Use HELP for help.
 cqlsh> ALTER USER cassandra WITH PASSWORD 'balcerowiczmusiodejsc';
 cqlsh> CREATE USER scott WITH PASSWORD 'tiger' NOSUPERUSER;
 cqlsh> quit;
+\end{lstlisting}
 
+\pagebreak
+
+\begin{lstlisting}[style=bash, caption={weryfikacja konfiguracji kont użytkowników}]
 $ cqlsh -u scott -p tiger;
 Connected to 0AND1AND2CLUSTER at localhost:9160.
 [cqlsh 4.1.1 | Cassandra 2.0.8 | CQL spec 3.1.1 | Thrift protocol 19.39.0]
@@ -595,7 +612,7 @@ cqlsh> LIST USERS;
 cqlsh>
 \end{lstlisting}
 
-Oczywiście włączenie uwierzytelniania ma wpływ na wszystkie kanały komunikacji z klastrem, w tym na drivery DataStax.
+Oczywiście włączenie uwierzytelniania ma wpływ na wszystkie kanały komunikacji z~klastrem, w~tym na drivery \emph{DataStax}.
 
 \section{Zarządzanie klastrem}
 
