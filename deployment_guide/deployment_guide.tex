@@ -1,97 +1,119 @@
-\documentclass{article}
+\documentclass{article} %======================================================
 
-\usepackage[polish]{babel}
-\usepackage[utf8]{inputenc}
-\usepackage{polski}
-\usepackage[T1]{fontenc}
-\usepackage{url}
-\usepackage{xcolor}
-\usepackage{listings} %for shell commands listing
+% package includes
+\usepackage[polish]{babel}  %polish typhographical rules
+\usepackage[utf8]{inputenc} %input in in UTF-8
+\usepackage{polski}         %more polish in this document
+\usepackage[T1]{fontenc}    %font encoding
+\usepackage{url}            %URL formatting
+\usepackage{xcolor}         %some color definitions
+\usepackage{indentfirst}    %indent at the beginning of each paragraph
+\usepackage{graphicx}       %image insertion package
+\usepackage{listings}       %for shell commands listing
+
+%use some polish typhographical rules borrowed from french
 \frenchspacing
-\usepackage{indentfirst}
-\usepackage{graphicx}
 
+%redefine page geometry (margins)
 \addtolength{\textwidth}{3cm}
 \addtolength{\hoffset}{-1.5cm}
 \addtolength{\textheight}{3cm}
 \addtolength{\voffset}{-1.5cm}
 
+%define style for bash command listing
 \lstdefinestyle{bash}{
-  language=bash,
-  basicstyle=\small\sffamily,
-  stringstyle=\ttfamily, % typewriter type for strings
-  numbers=none,
-  numberstyle=\tiny,
-  numbersep=3pt,
-  showstringspaces=false, % no special characters instead of spaces
-  keywordstyle=,%\color{black}\bfseries, %keywords in bold
-  frame=tb,
-  columns=fullflexible,
-  backgroundcolor=\color{gray!20},
-  linewidth=1.0\linewidth,
-  xleftmargin=0.0\linewidth
+    language=bash,                         %listings are in bash
+    basicstyle=\small\sffamily,            %basic text style
+    stringstyle=\ttfamily,                 %typewriter type for strings
+    numbers=none,                          %no line numbers
+%    numberstyle=\tiny,
+%    numbersep=3pt,
+    showstringspaces=false,                %no special characters instead of spaces
+    keywordstyle=,%\color{black}\bfseries, %normally keywords would be typed in bold, but since listings package determines keywords wrongly, their style is the same as basic style
+    frame=tb,                              %top and bottom border
+    columns=fullflexible,                  %fixed columns would make listings not fit into page width
+    backgroundcolor=\color{gray!20},       %some nice background color
+    linewidth=1.0\linewidth,
+    xleftmargin=0.0\linewidth
 }
 
-\begin{document}
+\begin{document} %=============================================================
 
-\title{Apache Cassandra 2.0\\\vspace{2ex}Przewodnik instalacji i konfiguracji w systemie Debian Wheezy}
+\title{Apache Cassandra 2.0\\vspace{2ex}Przewodnik instalacji i konfiguracji w systemie Debian Wheezy}
 \author{Jan Baranowski, Michał Kaik\\Politechnika Poznańska}
+
 \maketitle
 
-\section{Wstęp}
+\section{Wstęp}\label{sec:intro}
 
-Niniejszy dokument ma za zadanie przedstawić proces instalacji i konfiguracji serwera baz danych NoSQL \emph{Apache Cassandra} w środowisku rozproszonym.
+Niniejszy dokument ma za zadanie przedstawić proces instalacji i~konfiguracji serwera baz danych NoSQL \emph{Apache Cassandra} w~środowisku rozproszonym.
 Na potrzeby demonstracji zakłada się że środowisko to będzie składać się z kilku węzłów połączonych siecią lokalną.
 
-Apache Cassandra jest serwerem baz danych NoSQL, początkowo rozwijanym przez Facebooka na potrzeby umożliwienia efektywnego przeszukiwania skrzynki odbiorczej. Obecnie Cassandra jest rozwijana przez Apache Foundation (jest jednym z projektów top-level) i stanowi podstawę dla zestawu narzędzi DataStax. 
+\emph{Apache Cassandra} jest serwerem baz danych NoSQL, początkowo rozwijanym przez \emph{Facebooka} na potrzeby umożliwienia efektywnego wyszukiwania wiadomości w~skrzynce odbiorczej.
+Obecnie (od marca 2009 roku) \emph{Cassandra} jest rozwijana przez \emph{Apache Foundation} (jako jeden z~projektów top-level) i~stanowi podstawę dla zestawu narzędzi DataStax. 
 
-Cassandra powstała jako narzędzie mające w założeniu cechować się:
+\emph{Cassandra} powstała jako narzędzie mające w~założeniu cechować się:
 \begin{itemize}
-\item wysoką dostępnością (Cassandra jest określana jako zawsze zapisywalna baza danych)
-\item niskim opóźnieniem wykonywanych operacji (ang. latency)
-\item odpornością na awarie (możliwością replikacji danych, brakiem komponentów, których awaria może zdestabilizować system (ang. single points of failure))
-\item możliwością regulacji kompromisu pomiędzy szybkością działania a odpornością na awarie i spójnością replik
+\item wysoką dostępnością (\emph{Cassandra} jest określana jako zawsze zapisywalna baza danych)
+\item niskim opóźnieniem wykonywanych operacji (\textit{ang.}~latency)
+\item odpornością na awarie (możliwością replikacji danych, brakiem komponentów, których awaria może zdestabilizować system (\textit{ang.}~single points of failure))
+\item możliwością regulacji kompromisu pomiędzy szybkością działania a~odpornością na awarie i~spójnością replik
 \item relatywnie prostym modelem danych
 \end{itemize}
 
-Zarówno opisanie kolumnowego modelu danych wykorzystywanego w Cassandrze, jak i mechanizmów, dzięki którym spełnia ona założenia projektowe nie jest celem tego dokumentu. Autorzy mogą jedynie podać propozycje publikacji, które opisują wspomniane zagadnienia. Zarówno dla modelu danych, jak i budowy wewnętrznej Cassandry będzie to przede wszystkim dokumentacja udostępniana przez firmę DataStax ([link]). Model danych, przedstawiony z perspektywy osób pracujących z bazami relacyjnymi został doskonale (choć może zbyt obszernie) opisany w Cassandra - The Definitive Guide ([x]). Z kolei architektura Cassandry w dużym skrócie (choć zapewne w sposób wystarczający by służyć jako wstęp do tego dokumentu) została przedstawiona w prezentacji \cite{JanBaranowski2014}.
+Zarówno opisanie kolumnowego modelu danych wykorzystywanego w~\emph{Cassandrze}, jak i~mechanizmów, dzięki którym spełnia ona założenia projektowe nie jest celem tego dokumentu.
+Autorzy mogą jedynie podać propozycje publikacji, które opisują wspomniane zagadnienia.
+Zarówno dla modelu danych, jak i~budowy wewnętrznej \emph{Cassandry} będzie to przede wszystkim dokumentacja udostępniana przez firmę \emph{DataStax} \cite{datastax}.
+Kolumnowy model danych, przedstawiony z~perspektywy osób pracujących z~bazami relacyjnymi został doskonale (choć może zbyt obszernie) opisany w~\emph{Cassandra --- The Definitive Guide} \cite{definitiveguide}.
+Z~kolei architektura \emph{Cassandry} w~dużym skrócie (choć zapewne w~sposób wystarczający by służyć jako wstęp do tego dokumentu) została przedstawiona w~prezentacji \cite{prezentacja_srds}.
 
-Procedurę przygotowania klastra przedstawiono na przykładzie systemu operacyjnego Debian GNU/Linux 6, ponieważ uchodzi on za jedno z lepszych rozwiązań dla serwerów.
+Procedurę przygotowania klastra przedstawiono na przykładzie systemu operacyjnego Debian GNU/Linux 6, ponieważ uchodzi on za jedno z~lepszych rozwiązań dla serwerów.
 
-\section{Wybór dystrybucji}
+\section{Wybór dystrybucji}\label{sec:distro}
 
-Na początku nowi użytkownicy Cassandry stają przed wyborem dystrybucji tego oprogramowania. Możliwości są dwie: instalacja standardowej wersji Cassandry, dostarczonej przez Apache Foundation oraz instalacja platformy DataStax - zestawu narzędzi obudowujących Cassandrę i dostarczających m.in. funkcje pozwalające na uproszczenie zarządzania klastrem, monitorowanie przy użyciu narzędzi wizualnych, analizę obciążeń węzłów, itp. (por. Rysunek \ref{datastax_arch}).
+Na samym początku nowi użytkownicy \emph{Cassandry} stają przed wyborem dystrybucji tego oprogramowania.
+Możliwości są dwie: instalacja standardowej wersji dostarczonej przez \emph{Apache Foundation} oraz instalacja platformy \emph{DataStax}~---~zestawu narzędzi obudowujących \emph{Cassandrę} i~dostarczających m.in. funkcje pozwalające na uproszczenie zarządzania klastrem, wizualne monitorowanie, analizę obciążeń węzłów, itp. (por. rysunek \ref{fig:datastax_arch}).
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{gfx/datastax}
-\caption{architektura DataStax w odniesieniu do Cassandry, źródło: \cite{whydatastax}}
-\label{datastax_arch}
+\caption{architektura \emph{DataStax} w~odniesieniu do \emph{Cassandry}, źródło:~\cite{whydatastax}}
+\label{fig:datastax_arch}
 \end{figure}
 
-Wybór jest ważny o tyle, że pomimo wspólnego fundamentu, jakim jest Cassandra, procesy instalacji obu dystrybucji nie mają ze sobą nic wspólnego, tj. (według wiedzy autorów) nie da się doinstalować do dystrybucji Apache platformy DataStax.
+Wybór jest ważny o~tyle, że pomimo wspólnego fundamentu, jakim jest \emph{Cassandra}, procesy instalacji obu dystrybucji nie mają ze sobą nic wspólnego, tj. (według wiedzy autorów) nie da się doinstalować do dystrybucji \emph{Apache} platformy \emph{DataStax}.
 
-W tym miejscu należy wspomnieć o twórcach platformy -- firmie o zaskakującej nazwie DataStax, zajmującej się dostosowaniem Cassandry do potrzeb przedsiębiorstw poprzez m.in. rozwój i testowanie Cassandry, dostarczanie narzędzi ułatwiających administrację systemem, organizację szkoleń, certyfikację personelu technicznego, itd. Bodaj najbardziej znaczącym wkładem DataStax w rozwój projektu jest opracowanie szeregu konektorów dla różnych języków programowania, dzięki którym programiści mogą korzystać z bazy danych w sposób analogiczny do rozwiązań relacyjnych (np. tak jak w przypadku MySQL Connectors, por. \cite{mysql_connectors}) i rozbudowa dokumentacji technicznej platformy, włączając w to dokumentację plików konfiguracyjnych, architektury Cassandry i języka CQL (odpowiednika SQL dla kolumnowych baz danych, których przedstawicielem jest Cassandra).
+W~tym miejscu należy wspomnieć o~twórcach platformy~---~firmie o~zaskakującej nazwie \emph{DataStax}, zajmującej się dostosowaniem \emph{Cassandry} do potrzeb przedsiębiorstw poprzez m.in. rozwój i~testowanie bazy danych, dostarczanie narzędzi ułatwiających administrację systemem, organizację szkoleń, certyfikację personelu technicznego, itd.
+Bodaj najbardziej znaczącym wkładem \emph{DataStax} w~rozwój projektu jest opracowanie szeregu konektorów dla różnych języków programowania, dzięki którym programiści mogą korzystać z~\emph{Cassandry} w~sposób analogiczny do rozwiązań relacyjnych (np. tak jak w~przypadku \emph{MySQL Connectors}, por. \cite{mysql_connectors}) i~rozbudowa dokumentacji technicznej platformy, włączając w~to dokumentację plików konfiguracyjnych, architektury \emph{Cassandry} i języka \emph{CQL} (odpowiednika \emph{SQL} dla kolumnowych baz danych).
 
-Na potrzeby niniejszego dokumentu założono, że właściwym wyborem będzie dystrybucja Apache Cassandra, ze względu na to, że dokument ma pełnić rolę wprowadzenia do technologii, nie zaś pozwalać na błyskawiczne wdrożenie systemu (ang. rapid deployment). Poza tym, przewodniki instalacji i konfiguracji DataStaxa dostępne są np. na stronie \cite{datastax_guides}.
+Na potrzeby niniejszego dokumentu założono, że właściwym wyborem będzie dystrybucja \emph{Apache Cassandra}, ze względu na to, że dokument ma pełnić rolę wprowadzenia do technologii, nie zaś pozwalać na błyskawiczne wdrożenie systemu (\textit{ang.}~rapid deployment).
+Poza tym, przewodniki instalacji i~konfiguracji \emph{DataStaxa} dostępne są np. na stronie \cite{datastax_guides}.
 
-\section{Instalacja}
+\section{Instalacja}\label{sec:install}
 
-Cassandra zostanie zainstalowana przy użyciu narzędzia APT z repozytorium Apache Software Foundation. Wymagane będzie dodanie odpowiedniego repozytorium do listy źródeł APTa. Dodatkowo ze względu na to, że Cassandra napisana jest w Javie, pokazany zostanie proces instalacji Oracle JVM w systemie Debian (ta maszyna wirtualna jest zalecana przez twórców Cassandry).
+\emph{Cassandra} zostanie zainstalowana przy użyciu narzędzia \emph{APT} z~repozytorium \emph{Apache Software Foundation}.
+Wymagane będzie dodanie odpowiedniego repozytorium do listy źródeł \emph{APTa}.
+Dodatkowo ze względu na to, że \emph{Cassandra} napisana jest w~Javie, pokazany zostanie proces instalacji \emph{Oracle JRE} w~systemie \emph{Debian} (ta maszyna wirtualna jest zalecana przez twórców \emph{Cassandry}).
 
-\subsection{Wybór maszyny wirtualnej Java}
+\subsection{Wybór maszyny wirtualnej Java}\label{subsec:install_vm}
 
-Apache Software Foundation dostarcza pakiety zawierające Cassandrę w formacie *.deb, a także repozytorium dla APTa. Jedną z zależności pakietu "cassandra" jest pakiet "openjdk-7-jre". Jest to w pewnym sensie sprzeczne z zaleceniami twórców Cassandry, ponieważ ci rekomendują maszynę wirtualną Oracle jako środowisko uruchomieniowe (nawet w testowanej wersji 2.0 bazy danych odpowiedni komunikat wyświetlany jest w logu). Nie zmienia to faktu, że testy (funkcjonalne, lecz nie wydajnościowe) przeprowadzone na potrzeby stworzenia tego artykułu udowodniły, że Cassandra działa bez zarzutu także w środowisku OpenJDK. 
+\emph{Apache Software Foundation} dostarcza pakiety zawierające \emph{Cassandrę} w~formacie \texttt{*.deb}, a~także repozytorium dla \emph{APTa}.
+Jedną z~zależności pakietu \texttt{cassandra} jest pakiet \texttt{openjdk-7-jre}.
+Jest to w~pewnym sensie sprzeczne z~zaleceniami twórców bazy danych, ponieważ ci rekomendują maszynę wirtualną \emph{Oracle} jako środowisko uruchomieniowe (nawet w~testowanej wersji bazy 2.0 odpowiedni komunikat wyświetlany jest w~logu).
+Nie zmienia to faktu, że testy (funkcjonalne, lecz nie wydajnościowe) przeprowadzone na potrzeby tego artykułu udowodniły, że \emph{Cassandra} działa bez zarzutu także w~środowisku \emph{OpenJDK}. 
 
-Należy zatem wybrać pomiędzy stosowaniem się do zaleceń a prostotą instalacji.
+Należy zatem wybrać pomiędzy stosowaniem się do zaleceń a~prostotą instalacji.
 
-\subsection{Instalacja i konfiguracja Oracje Java}
+\subsection{Instalacja i konfiguracja Oracje Java}\label{subsec:install_oracle}
 
-Pakiet z OpenJDK jest instalowany jako pakiet zależny podczas instalacji Cassandry. Jeżeli jednak administrator zdecyduje się użyć Oracle JVM, poniżej przedstawiona jest skrótowa procedura instalacji tego oprogramowania w systemie Debian. Stanowi ona kompilację najprostszych rozwiązań i tym różni się od większości przewodników dostępnych w internecie, że poza konsolą systemu nie wymaga żadnych dodatkowych narzędzi (np. mechanizmu transferu plików z maszyny-terminala do maszyny-serwera).
+Pakiet z~\emph{OpenJDK} jest instalowany jako pakiet zależny podczas instalacji Cassandry.
+Jeżeli jednak administrator zdecyduje się użyć \emph{Oracle JVM}, poniżej przedstawiona jest skrótowa procedura instalacji tego oprogramowania w~systemie \emph{Debian}.
+Stanowi ona kompilację najprostszych rozwiązań i~tym różni się od większości przewodników dostępnych w~internecie, że poza konsolą systemu nie wymaga żadnych dodatkowych narzędzi (np. mechanizmu transferu plików z~maszyny-terminala do maszyny-serwera).
 
-Pierwszym krokiem jest pobranie pakietu oprogramowania (JRE, nie JDK) ze strony Oracle. Standardowo by pobrać plik należy zaakceptować umowę licencyjną Oracle, jednak przy odpowiedniej konfiguracji możliwe jest ominięcie tego kroku \cite{downloading_oracle_java}:
+Pierwszym krokiem jest pobranie pakietu oprogramowania (JRE, nie JDK) ze strony \emph{Oracle}.
+Standardowo by pobrać plik należy zaakceptować umowę licencyjną, jednak przy odpowiedniej konfiguracji możliwe jest ominięcie tego kroku \cite{downloading_oracle_java}:
 
-\begin{lstlisting}[style=bash, caption={pobieranie Oracle JRE}]
+\begin{lstlisting}[style=bash, caption={pobieranie \emph{Oracle JRE}}]
 $ wget --no-cookies \
 > --no-check-certificate \
 > --header "Cookie: oraclelicense=accept-securebackup-cookie" \
@@ -99,20 +121,22 @@ $ wget --no-cookies \
 > -O /tmp/jre-7u60-linux-i586.tar.gz
 \end{lstlisting}
 
-Popularnym sposobem instalacji pobranego oprogramowania jest wypakowanie archiwum (zazwyczaj do katalogu /opt) i ręczna konfiguracja ścieżki systemowej (por. \cite{downloading_oracle_java}). Debian dostarcza jednak narzędzie pozwalające przekonwertować archiwum do pakietu DEB \cite{installing_oracle_java_on_debian}.
+Popularnym sposobem instalacji pobranego oprogramowania jest wypakowanie archiwum (zazwyczaj do katalogu \texttt{/opt}) i~ręczna konfiguracja ścieżki systemowej (por. \cite{downloading_oracle_java}).
+\emph{Debian} dostarcza jednak narzędzie pozwalające przekonwertować archiwum do pakietu \emph{DEB} \cite{installing_oracle_java_on_debian}.
 
-Należy je zainstalować, a potem użyć:
+Należy je zainstalować, a~potem użyć:
 
-\begin{lstlisting}[style=bash, caption={budowa pakietu DEB z Oracle JRE}]
+\begin{lstlisting}[style=bash, caption={budowa pakietu DEB z~\emph{Oracle JRE}}]
 $ apt-get install java-package
 
 $ fakeroot make-jpkg /tmp/jre-7u60-linux-i586.tar.gz
 \end{lstlisting}
 
-Powstały w ten sposób pakiet należy zainstalować. Po instalacji należy ustawić Oracle JVM jako domyślną maszynę wirtualną w systemie.
+Powstały w~ten sposób pakiet \emph{DEB} należy zainstalować.
+Po instalacji należy ustawić \emph{Oracle JVM} jako domyślną maszynę wirtualną w~systemie.
 
-\begin{lstlisting}[style=bash, caption={instalacja i konfiguracja Oracle JRE}]
-$ dpkg -i /tmp/oracle-j2re1.7\textunderscore 1.7.0+update60_i386.deb
+\begin{lstlisting}[style=bash, caption={instalacja i konfiguracja \emph{Oracle JRE}}]
+$ dpkg -i /tmp/oracle-j2re1.7_1.7.0+update60_i386.deb
 
 $ update-alternatives --config java
 There are 2 choices for the alternative java (providing /usr/bin/java).
@@ -137,20 +161,23 @@ Według wiedzy autorów Cassandra nie wymaga ustawiania zmiennej \lstinline[styl
 $ echo "export JAVA_HOME=/usr/lib/jvm/j2re1.7-oracle/" >> /home/<user>/.bashrc
 \end{lstlisting}
 
-\subsection{Konfiguracja repozytorium}
+\subsection{Konfiguracja repozytorium}\label{subsec:install_repo}
 
-By móc zainstalować Cassandrę, należy dodać odpowiednie repozytorium Apache Software Foundation do źródeł programu APT. Zgodnie z konwencją każda większa wersja Cassandry znajduje się w osobnym repozytorium. Na potrzeby tego dokumentu zostanie zainstalowana Cassandra 2.0.8.
+By móc zainstalować \emph{Cassandrę}, należy dodać odpowiednie repozytorium \emph{Apache Software Foundation} do źródeł programu \emph{APT}.
+Zgodnie z~konwencją każda większa wersja \emph{Cassandry} znajduje się w~osobnym repozytorium.
+Na potrzeby tego dokumentu w systemie testowym zostanie zainstalowana \emph{Cassandra 2.0.8}.
 
-Do pliku \lstinline[style=bash]!/etc/apt/sources.list! należy dopisać:
+Do pliku \texttt{/etc/apt/sources.list} należy dopisać:
 
-\begin{lstlisting}[style=bash, caption={nowe źródłą pakietów dla APTa}]
+\begin{lstlisting}[style=bash, caption={nowe źródła pakietów dla \emph{APTa}}]
 deb http://www.apache.org/dist/cassandra/debian 20x main
 deb-src http://www.apache.org/dist/cassandra/debian 20x main
 \end{lstlisting}
 
-Próba pobrania spisu zawartości repozytorium zakończy się niepowodzeniem, ponieważ APT nie zna kluczy publicznych dla repozytorium Apache SF. Te należy dodać w następujący sposób:
+Próba pobrania spisu zawartości repozytorium zakończy się niepowodzeniem, ponieważ \emph{APT} nie zna kluczy publicznych dla repozytorium \emph{Apache Software Foundation}.
+Te należy dodać w~następujący sposób:
 
-\begin{lstlisting}[style=bash, caption={pobieranie kluczy publicznych repozytorium ASF}]
+\begin{lstlisting}[style=bash, caption={pobieranie kluczy publicznych repozytorium \emph{ASF}}]
 $ gpg --keyserver pgp.mit.edu --recv-keys F758CE318D77295D
 $ gpg --export --armor F758CE318D77295D | sudo apt-key add -
 
@@ -163,107 +190,126 @@ Po zakończeniu wszystkich operacji należy pobrać spis zawartości repozytori�
 $ apt-get update
 \end{lstlisting}
 
-\subsection{Instalacja Cassandry}
+\subsection{Instalacja Cassandry}\label{subsec:install_install}
 
-Ostatnim krokiem procesu instalacji jest zainstalowanie Cassandry z użyciem APTa:
-\begin{lstlisting}[style=bash, caption={instalacja Cassandry}]
+Ostatnim krokiem procesu instalacji jest zainstalowanie \emph{Cassandry} z~użyciem \emph{APTa}:
+\begin{lstlisting}[style=bash, caption={instalacja \emph{Cassandry}}]
 $ apt-get install cassandra
 \end{lstlisting}
 
-W efekcie Cassandra powinna zostać zainstalowana i uruchomiona.
+W~efekcie \emph{Cassandra} powinna zostać zainstalowana i~uruchomiona.
 
-\section{Konfiguracja węzła}
+\section{Konfiguracja węzła}\label{sec:config}
 
-Ta część dokumentu opisuje czynności związane z konfiguracją węzła Cassandry tak, by był on zdolny dołączyć do klastra. Cassandra jest systemem P2P, więc o utworzeniu klastra węzły decydują wspólnie w oparciu o taką samą nazwę klastra zdefiniowaną w pliku konfiguracyjnym i włączony kanał komunikacji poprzez plotkowanie. Kanał ten jest domyślnie wyłączony, zatem każdy węzeł Cassandry w sieci będzie z początku tworzył osobny klaster.
+Ta część dokumentu opisuje czynności związane z~konfiguracją węzła \emph{Cassandry} tak, by był on zdolny dołączyć do klastra.
+\emph{Cassandra} jest systemem P2P, więc o~utworzeniu klastra węzły decydują wspólnie w~oparciu o~taką samą nazwę klastra zdefiniowaną w~pliku konfiguracyjnym i~włączony kanał komunikacji poprzez plotkowanie.
+Kanał ten jest domyślnie wyłączony, zatem każdy węzeł \emph{Cassandry} w~sieci będzie z~początku tworzył osobny klaster.
 
-\subsection{Stan systemu po instalacji}\label{system_state}
+\subsection{Stan systemu po instalacji}\label{subsec:config_postinst}
 
-Zaraz po instalacji w systemie pojawia się nowa usługa: cassandra. Jest ona domyślnie uruchomiona. Jej konfiguracja zapobiega możliwości dołączenia węzła do jakiegokolwiek klastra ze względu na zablokowanie mechanizmu plotkowania (dokładnie: agent implementujący algorytm plotkujący nasłuchuje na adresie IP 127.0.0.1).
+Zaraz po instalacji w~systemie pojawia się nowa usługa: \texttt{cassandra}.
+Jest ona domyślnie uruchomiona.
+Jej konfiguracja zapobiega możliwości dołączenia węzła do jakiegokolwiek klastra ze względu na zablokowanie mechanizmu plotkowania (dokładnie: agent implementujący algorytm plotkujący nasłuchuje wyłącznie na adresie IP 127.0.0.1).
 
-Pliki konfiguracyjne można znaleźć w katalogu \lstinline[style=bash]!/etc/cassandra!. Są wśród nich:
+Pliki konfiguracyjne można znaleźć w~katalogu \texttt{/etc/cassandra}.
+Są wśród nich:
+
 \begin{itemize}
-\item \lstinline[style=bash]!/etc/cassandra/cassandra-env.sh! - skrypt definiujący zmienne środowiskowe w formie argumentów dla maszyny wirtualnej Java (np. wielkość stosu, ale także: włączenie/wyłączenie mechanizmu JMX)
-\item \lstinline[style=bash]!/etc/cassandra/cassandra-rackdc.properties! - informacja o tym, w którym fizycznie racku i centrum danych znajduje się obecny węzeł
-\item \lstinline[style=bash]!/etc/cassandra/cassandra-topology.properties! - przybliżone informacje o tym, w których rackach i centrach danych znajdują się inne węzły klastra. Plik ten jest wykorzystywany przez jedną z kilku wersji algorytmu rozmieszczania replik
-\item \lstinline[style=bash]!/etc/cassandra/cassandra-topology.yaml! - plik analogiczny do poprzedniego, wykorzystywany jednak przez inną wersję algorytmu
-\item \lstinline[style=bash]!/etc/cassandra/cassandra.yaml! - główny plik konfiguracyjny Cassandry
+\item \texttt{/etc/cassandra/cassandra-env.sh}~---~skrypt definiujący zmienne środowiskowe w formie argumentów dla maszyny wirtualnej Java (np. wielkość stosu, ale także m.in. włączenie/wyłączenie mechanizmu \emph{JMX}).
+\item \texttt{/etc/cassandra/cassandra-rackdc.properties}~---~informacja o tym, w~którym fizycznie racku i~centrum danych znajduje się obecny węzeł.
+\item \texttt{/etc/cassandra/cassandra-topology.properties}~---~przybliżone informacje o tym, w~których rackach i~centrach danych znajdują się inne węzły klastra. Plik ten jest wykorzystywany przez jedną z~kilku wersji algorytmu rozmieszczania replik (\emph{snitcha}).
+\item \texttt{/etc/cassandra/cassandra-topology.yaml}~---~plik analogiczny do poprzedniego, wykorzystywany jednak przez inną wersję algorytmu.
+\item \texttt{/etc/cassandra/cassandra.yaml}~---~główny plik konfiguracyjny \emph{Cassandry}.
 \end{itemize}
 
-Pliki danych (w tym: commit logi) znaleźć można w katalogu \lstinline[style=bash]!/var/lib/cassandra!. Czyszcząc zawartość 3 znajdujących się w nim podkatalogów można zresetować stan klastra. W celu wykonania tej czynności autorzy nie zalecają jednak ich usuwania (podczas testowania mogą one zostać utworzone na nowo z prawem zapisu tylko dla roota, co uniemożliwi normalny start usługi).
+Pliki danych (w~tym: commit logi) znaleźć można w~katalogu \texttt{/var/lib/cassandra}.
+Czyszcząc zawartość trzech znajdujących się w~nim podkatalogów można zresetować stan klastra.
+W~celu wykonania tej czynności autorzy nie zalecają jednak ich całkowitego usuwania (podczas testowania mogą one zostać utworzone na nowo z~prawem zapisu tylko dla roota, co uniemożliwi normalny start usługi).
 
-Plik logu znaleźć można w \lstinline[style=bash]!/var/log/cassandra/system.log!
+Plik logu znaleźć można w~\texttt{/var/log/cassandra/system.log}.
 
-\subsection{Jak debugować konfigurację?}
+\subsection{Jak debugować konfigurację?}\label{subsec:config_debug}
 
-Przed rozpoczęciem wprowadzania zmian do plików konfiguracyjnych zaleca się wyłączenie automatycznego uruchamiania usługi. Błędnie skonfigurowany węzeł może dołączyć do nieodpowiedniego klastra, a jego usunięcie w takim przypadku nie jest zadaniem trywialnym. Efekt można osiągnąć wykonując polecenie:
+Przed rozpoczęciem wprowadzania zmian do plików konfiguracyjnych zaleca się wyłączenie automatycznego uruchamiania usługi.
+Błędnie skonfigurowany węzeł może dołączyć do nieodpowiedniego klastra, a~jego usunięcie w~takim przypadku nie jest zadaniem trywialnym.
+Efekt można osiągnąć wykonując polecenie:
 
-\begin{lstlisting}[style=bash, caption={wyłączenie uruchamiania Cassandry na jej domyślnych runlevelach}]
+\begin{lstlisting}[style=bash, caption={wyłączenie uruchamiania \emph{Cassandry} na jej domyślnych runlevelach}]
 $ insserv -r cassandra
 \end{lstlisting}
 
-Najprostszym sposobem sprawdzenia poprawności konfiguracji jest uruchomienie węzła w trybie jawnym (w przeciwieństwie do deamona). Służy do tego podane poniżej polecenie, które wypisze log działania węzła na standardowe wyjście.
+Najprostszym sposobem sprawdzenia poprawności konfiguracji jest uruchomienie węzła w~trybie jawnym (w~przeciwieństwie do deamona).
+Służy do tego podane poniżej polecenie, które wypisze log działania węzła na standardowe wyjście.
 
-\begin{lstlisting}[style=bash, caption={wyłączenie uruchamiania Cassandry na jej domyślnych runlevelach}]
+\begin{lstlisting}[style=bash, caption={testowe uruchamianie \emph{Cassandry}}]
 $ cassandra -f  # -f for foreground
 \end{lstlisting}
 
-Dodatkowo można zarchiwizować taki log poleceniem \lstinline[style=bash]!tee plik.log!, które skopiuje standardowe wejście na standardowe wyjście i do podanego pliku:
+Dodatkowo można zarchiwizować taki log poleceniem \texttt{tee plik.log}, które skopiuje standardowe wejście na standardowe wyjście i do podanego pliku:
 
-\begin{lstlisting}[style=bash, caption={wyłączenie uruchamiania Cassandry na jej domyślnych runlevelach}]
+\begin{lstlisting}[style=bash, caption={testowe uruchamianie \emph{Cassandry} z archiwizacją logu}]
 $ cassandra -f | tee /tmp/cassandra_testrun.log
 \end{lstlisting}
 
-\textbf{UWAGA!} Jeżeli Cassandra zostanie uruchomiona w trybie jawnym podczas gdy równolegle usługa działa w tle, zamiast informacji o błędzie w logu tej pierwszej pojawi się informacja o wyjątku NullPointerException.
+\bigskip
 
-\textbf{UWAGA!} Jeżeli pierwsze uruchomienie Cassandry odbędzie się w trybie jawnym z poziomu użytkownika innego niż "cassandra", usługa nie będzie miała prawa zapisu do katalogów danych, nie będzie więc w stanie się uruchomić.
+\noindent\textbf{UWAGA!} Jeżeli \emph{Cassandra} zostanie uruchomiona w~trybie jawnym podczas gdy równolegle usługa działa w~tle, zamiast informacji o~błędzie w~logu tej pierwszej pojawi się informacja o~wyjątku \texttt{NullPointerException}.
 
-\textbf{UWAGA!} Jeżeli zmienna \lstinline[style=bash]!JAVA_HOME! dla użytkownika uruchamiającego polecenie \lstinline[style=bash]!cassandra -f! jest ustawiona, ale prowadzi do poprawnie zainstalowanej maszyny wirtualnej, cassandra nie uruchomi się, ale ani skrypt startowy ani log nie poinformują o błędzie.
+\bigskip
 
-\pagebreak
+\noindent\textbf{UWAGA!} Jeżeli pierwsze uruchomienie \emph{Cassandry} odbędzie się w~trybie jawnym z~poziomu użytkownika innego niż \texttt{cassandra}, usługa nie będzie miała prawa zapisu do nowo utworzonych katalogów danych, nie będzie więc w~stanie się uruchomić.
 
-\subsection{Pliki konfiguracyjne}
+\bigskip
 
-Role podstawowych plików konfiguracyjnych zostały przedstawione w punkcie \ref{system_state}. Tutaj (w tabeli \ref{config_table}) zostaną opisane parametry konfiguracyjne (z \lstinline[style=bash]!/etc/cassandra/cassandra.yaml!), których wartości powinny zostać świadomie dobrane przed uruchomieniem pojedynczego węzła.
+\noindent\textbf{UWAGA!} Jeżeli zmienna \texttt{JAVA\textunderscore HOME} dla użytkownika uruchamiającego polecenie \texttt{cassandra~-f} jest ustawiona, ale prowadzi do niepoprawnie zainstalowanej maszyny wirtualnej, \emph{Cassandra} nie uruchomi się, ale ani skrypt startowy ani log nie poinformują o~błędzie.
 
-Konfigurację węzła ułatwia główny plik konfiguracyjny Cassandry, zawierający obszerne komentarze.
+\subsection{Pliki konfiguracyjne}\label{subsec:config_files}
+
+Role podstawowych plików konfiguracyjnych zostały przedstawione w~punkcie \ref{subsec:config_postinst}.
+Tutaj (w~tabeli \ref{tab:config_options}) zostaną opisane parametry konfiguracyjne (z \texttt{/etc/cassandra/cassandra.yaml}), których wartości powinny zostać świadomie dobrane przed uruchomieniem pojedynczego węzła.
+
+Konfigurację węzła ułatwia sam plik konfiguracyjny \emph{Cassandry}, zawierający obszerne komentarze.
 
 \begin{table}[hhh]
-\caption{podstawowe parametry konfiguracyjne Cassandry (w \lstinline[style=bash]!/etc/cassandra/cassandra.yaml!).}
-\label{config_table}
-\begin{tabular}{|r|c|p{8cm}|}
+\caption{podstawowe parametry konfiguracyjne \emph{Cassandry} (w~\texttt{/etc/cassandra/cassandra.yaml}).}
+\begin{tabular}{|r|c|p{7.5cm}|}
 \hline 
 \textbf{Parametr} & \textbf{Linia} & \textbf{Komentarz}\\
 \hline
 \hline
-cluster\_name & 10 & nazwa klastra, którego ten węzeł jest członkiem\\
+\texttt{cluster\_name} & 10 & nazwa klastra, którego ten węzeł jest członkiem\\
 \hline
-seed\_provider/parameters/seeds & 192 & węzeł Cassandry nie odkrywa innych węzłów automatycznie, stąd dla algorytmu plotkowania wymagana jest lista początkowych "punktów kontaktowych". Oczywiście punkty powinny być tak dobrane by nie dopuścić do partycjonowania klastra.\\
+\texttt{seed\_provider/parameters/seeds} & 192 & Węzeł \emph{Cassandry} nie odkrywa innych węzłów automatycznie, stąd dla algorytmu plotkowania wymagana jest lista początkowych "punktów kontaktowych". Oczywiście punkty powinny być tak dobrane by nie dopuścić do partycjonowania klastra.\\
 \hline
-listen\_address & 297 & adres IP kanału komunikacyjnego pomiędzy węzłami. Agent algorytmu plotkującego będzie nasłuchiwał na tym adresie. Jeżeli wartość nie zostanie tutaj podana, Cassandra wybierze adres IP local hosta.\\
+\texttt{listen\_address} & 297 & Adres IP kanału komunikacyjnego pomiędzy węzłami. Agent algorytmu plotkującego będzie nasłuchiwał na tym adresie. Jeżeli wartość nie zostanie tutaj podana, \emph{Cassandra} wybierze adres IP localhosta.\\
 \hline
-start\_rpc & 324 & czy uruchomić serwer Thrift RPC. Wyłączenie serwera RPC uniemożliwi dostęp do węzła przez np. cqlsh.\\
+\texttt{start\_rpc} & 324 & Czy uruchomić serwer \emph{Thrift RPC}. Wyłączenie serwera RPC uniemożliwi dostęp do węzła przez np. \texttt{cqlsh}.\\
 \hline
-rpc\_address & 335 & adres IP na którym ma nasłuchiwać serwer Thifta\\
+\texttt{rpc\_address} & 335 & Adres IP na którym ma nasłuchiwać serwer \emph{Thifta}.\\
 \hline
 \end{tabular} 
+\label{tab:config_options}
 \end{table}
 
-\subsection{Weryfikacja stanu węzła}
+\subsection{Weryfikacja stanu węzła}\label{subsec:config_check}
 
-Szeroko pojęty stan węzła po konfiguracji można sprawdzić na kilka sposobów. Przede wszystkim po uruchomieniu usługi należy sprawdzić czy ta faktycznie działa i gdy tak nie jest, przejrzeć log.
+Szeroko pojęty stan węzła po konfiguracji można sprawdzić na kilka sposobów.
+Przede wszystkim po uruchomieniu usługi należy sprawdzić czy ta faktycznie działa i~gdy tak nie jest, przejrzeć log.
 
-W następnej kolejności można sprawdzić czy Cassandra nasłuchuje na portach zdefiniowanych w pliku konfiguracyjnym:
+W~następnej kolejności można sprawdzić czy \emph{Cassandra} nasłuchuje na portach zdefiniowanych w~pliku konfiguracyjnym:
 
-\begin{lstlisting}[style=bash, caption={sprawdzanie na których portach nasłuchuje Cassandra}]
-$ netstat -ln4p  #listening, IPv4, numeric, with owner process information
+\begin{lstlisting}[style=bash, caption={sprawdzanie na których portach nasłuchuje \emph{Cassandra}}]
+$ netstat -ln4p  #listening, numeric, IPv4 only, with owner process information
 \end{lstlisting}
 
-Kolejnym sposobem jest próba połączenia się z węzłem poprzez Thrift API.
-\begin{lstlisting}[style=bash, caption={dostęp do Cassandry przez Thrift API.}]
+Kolejnym sposobem jest próba połączenia się z~węzłem poprzez Thrift API.
+
+\begin{lstlisting}[style=bash, caption={dostęp do \emph{Cassandry} przez \emph{Thrift API}.}]
 $ cqlsh localhost 9160 #use "quit;" to exit CQL shell
 \end{lstlisting}
 
 Wreszcie można wyświetlić stan klastra, do którego należy węzeł:
+
 \begin{lstlisting}[style=bash, caption={sprawdzanie stanu klastra}]
 $ nodetool --host localhost -p 7199 status # 7199 is the JMX port
 Datacenter: datacenter1
@@ -296,31 +342,46 @@ UN  127.0.0.1  98.76 KB   256     100.0%            d85efd66-29fb-46d7-b824-a4cc
 
 \subsection{Backup danych}
 
+\begin{thebibliography}{10}%===================================================
 
-\begin{thebibliography}{Xxx99x}
+\bibitem[1]{prezentacja_srds}
+Jan Baranowski, Michał Kaik, Maciej Urbański,\\
+\emph{Cassandra, Highly available, scalable storage system},\\
+Politechnika Poznańska 2014
 
-\bibitem[2]{mysql_connectors}
-MySQL Connectors\\
-\url{http://www.mysql.com/products/connector/}\\
-dostęp 16 czerwca 2014 r.
+\bibitem[2]{definitiveguide}
+E. Hewitt,\\
+\emph{Cassandra, The Defintive Guide},\\
+O'Reilly 2010
 
-\bibitem[3]{datastax_guides}
-NoSQL Apache Cassandra Documentation\\
-\url{http://planetcassandra.org/documentation/}\\
-dostęp 16 czerwca 2014 r.
+\bibitem[3]{datastax}
+\emph{DataStax},\\
+\url{http://www.datastax.com/},\\
+dostęp 17 czerwca 2014 r.
 
 \bibitem[4]{downloading_oracle_java}
-Daniel Stavrovski, Installing Oracle JAVA 7 on Debian Wheezy\\
-\url{http://d.stavrovski.net/blog/post/installing-oracle-java-7-on-debian-wheezy}\\
+Daniel Stavrovski,\\
+\emph{Installing Oracle JAVA 7 on Debian Wheezy},\\
+\url{http://d.stavrovski.net/blog/post/installing-oracle-java-7-on-debian-wheezy},\\
 dostęp 16 czerwca 2014 r.
 
 \bibitem[5]{installing_oracle_java_on_debian}
-Java/Sun, Debian Wiki\\
-\url{https://wiki.debian.org/Java/Sun}\\
+\emph{Java/Sun, Debian Wiki},\\
+\url{https://wiki.debian.org/Java/Sun},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[6]{whydatastax}
-Why DataStax?\\
+\bibitem[6]{mysql_connectors}
+\emph{MySQL Connectors},\\
+\url{http://www.mysql.com/products/connector/},\\
+dostęp 16 czerwca 2014 r.
+
+\bibitem[7]{datastax_guides}
+\emph{NoSQL Apache Cassandra Documentation},\\
+\url{http://planetcassandra.org/documentation/},\\
+dostęp 16 czerwca 2014 r.
+
+\bibitem[8]{whydatastax}
+\emph{Why DataStax?},\\
 \url{http://www.datastax.com/why-datastax}\\
 dostęp 16 czerwca 2014 r.
 
