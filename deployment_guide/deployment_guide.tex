@@ -84,7 +84,7 @@ Możliwości są dwie: instalacja standardowej wersji dostarczonej przez \emph{A
 Wybór jest ważny o~tyle, że pomimo wspólnego fundamentu, jakim jest \emph{Cassandra}, procesy instalacji obu dystrybucji nie mają ze sobą nic wspólnego, tj. (według wiedzy autorów) nie da się doinstalować do dystrybucji \emph{Apache} platformy \emph{DataStax}.
 
 W~tym miejscu należy wspomnieć o~twórcach platformy~---~firmie o~zaskakującej nazwie \emph{DataStax}, zajmującej się dostosowaniem \emph{Cassandry} do potrzeb przedsiębiorstw poprzez m.in. rozwój i~testowanie bazy danych, dostarczanie narzędzi ułatwiających administrację systemem, organizację szkoleń, certyfikację personelu technicznego, itd.
-Bodaj najbardziej znaczącym wkładem \emph{DataStax} w~rozwój projektu jest opracowanie szeregu konektorów dla różnych języków programowania, dzięki którym programiści mogą korzystać z~\emph{Cassandry} w~sposób analogiczny do rozwiązań relacyjnych (np. tak jak w~przypadku \emph{MySQL Connectors}, por. \cite{mysql_connectors}) i~rozbudowa dokumentacji technicznej platformy, włączając w~to dokumentację plików konfiguracyjnych, architektury \emph{Cassandry} i języka \emph{CQL} (odpowiednika \emph{SQL} dla kolumnowych baz danych).
+Bodaj najbardziej znaczącym wkładem \emph{DataStax} w~rozwój projektu jest opracowanie szeregu driverów/konektorów dla różnych języków programowania, dzięki którym programiści mogą korzystać z~\emph{Cassandry} w~sposób analogiczny do rozwiązań relacyjnych (np. tak jak w~przypadku \emph{MySQL Connectors}, por. \cite{mysql_connectors}) i~rozbudowa dokumentacji technicznej platformy, włączając w~to dokumentację plików konfiguracyjnych, architektury \emph{Cassandry} i języka \emph{CQL} (odpowiednika \emph{SQL} dla kolumnowych baz danych).
 
 Na potrzeby niniejszego dokumentu założono, że właściwym wyborem będzie dystrybucja \emph{Apache Cassandra}, ze względu na to, że dokument ma pełnić rolę wprowadzenia do technologii, nie zaś pozwalać na błyskawiczne wdrożenie systemu (\textit{ang.}~rapid deployment).
 Poza tym, przewodniki instalacji i~konfiguracji \emph{DataStaxa} dostępne są np. na stronie \cite{datastax_guides}.
@@ -283,6 +283,10 @@ Konfigurację węzła ułatwia sam plik konfiguracyjny \emph{Cassandry}, zawiera
 \hline
 \texttt{listen\_address} & 297 & Adres IP kanału komunikacyjnego pomiędzy węzłami. Agent algorytmu plotkującego będzie nasłuchiwał na tym adresie. Jeżeli wartość nie zostanie tutaj podana, \emph{Cassandra} wybierze adres IP localhosta.\\
 \hline
+\texttt{start\_native\_transport} & 310 & Czy uruchomić binarny protokół transportowy wykorzystywany przez drivery DataStax.\\
+\hline
+\texttt{native\_transport\_port} & 312 & Port dla binarnego protokołu transportowego. Jest on podawany w kodzie klienta gdy ten łączy się z określonym węzłem klastra.\\
+\hline
 \texttt{start\_rpc} & 324 & Czy uruchomić serwer \emph{Thrift RPC}. Wyłączenie serwera RPC uniemożliwi dostęp do węzła przez np. \texttt{cqlsh}.\\
 \hline
 \texttt{rpc\_address} & 335 & Adres IP na którym ma nasłuchiwać serwer \emph{Thifta}.\\
@@ -341,6 +345,8 @@ UN  127.0.0.1  98.76 KB   256     100.0%            d85efd66-29fb-46d7-b824-a4cc
 \subsection{Przyłączanie i odłączanie węzłów}
 
 \subsection{Backup danych}
+
+\pagebreak
 
 \begin{thebibliography}{10}%===================================================
 
