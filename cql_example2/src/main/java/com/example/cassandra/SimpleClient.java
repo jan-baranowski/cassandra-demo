@@ -1,15 +1,22 @@
 package com.example.cassandra;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Cluster.Builder;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 
 public class SimpleClient {
 	
+	public static final int CASSANDRA_NATIVE_TRANSPORT_PORT = 9042;
+	
 	private Cluster cluster;
 
-	public void connect(String node) {
-		this.cluster = Cluster.builder().addContactPoint(node).build();
+	public void connect(String node, int nattedNodesInsideCount) {
+		Builder b = Cluster.builder();
+		for (int i=0; i<nattedNodesInsideCount; i++) {
+			b.withPort(CASSANDRA_NATIVE_TRANSPORT_PORT+i).addContactPoint(node);
+		}
+		this.cluster = b.build();
 		
 		Metadata metadata = cluster.getMetadata();
 		
@@ -25,7 +32,7 @@ public class SimpleClient {
 
 	public static void main(String[] args) {
 		SimpleClient client = new SimpleClient();
-		client.connect("127.0.0.1");
+		client.connect("komp7", 3);
 		client.close();
 	}
 }
