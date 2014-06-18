@@ -352,7 +352,8 @@ Informację tę może podać narzędzie \texttt{nodetool}.
 
 \begin{lstlisting}[style=bash, caption={sprawdzanie stanu klastra po dołączeniu węzłów}]
 $ nodetool -host localhost -p 7199 status
-Note: Ownership information does not include topology; for complete information, specify a keyspace
+Note: Ownership information does not include topology; for complete information,
+specify a keyspace
 Datacenter: DC1
 ===============
 Status=Up/Down
@@ -542,6 +543,8 @@ $ crontab -u root -l
 
 \noindent\textbf{UWAGA!} Można dodatkowo zredukować obciążenie węzła podając przy naprawie parametr \texttt{--partitioner-range}.
 Spowoduje to naprawę jedynie tych zakresów kluczy dla których węzeł jest \emph{master replik}ą (pomijając zakresy ulokowane w~węźle przez mechanizm replikacji~---~standardowe repliki).
+
+\noindent\textbf{UWAGA!} Synchronizacja replik na żądanie spowoduje automatycznie usunięcie wszystkich \emph{tombstonów} związanych z~replikowaną rodziną kolumn, ponieważ po synchronizacji nie są one już potrzebne.
 
 \pagebreak
 
@@ -748,7 +751,118 @@ Keyspace: system_auth
 
 \subsection{Przyłączanie i odłączanie węzłów}\label{sec:management_nodepool}
 
+By dołączyć do klastra nowy węzeł w celu odciążenia pozostałych, należy wykonać procedurę analogiczną do opisanej w punkcie \ref{subsec:cluster_connecting}.
+Istnieje możliwość wyspecyfikowania w pliku konfiguracyjnym za ile tokenów (a nawet za jakie dokładnie) nowy węzeł będzie odpowiedzialny, ale nawet bez takiej informacji węzeł będzie w stanie skutecznie odciążyć klaster, ponieważ dzięki gossippingowi ma bezpośredni wgląd w stan wszystkich innych węzłów.
 
+Powodów by odłączyć węzeł może być kilka:
+\begin{itemize}
+\item klaster podlega aktualnie skalowaniu "w dół" i zbędne węzły są usuwane, choć cały czas działają prawidłowo
+\item węzeł działa, choć niestabilnie. Jest spora szansa na to, że w najbliższym czasie ulegnie awarii, powinien więc być zastąpiony nowym.
+\item węzeł już uległ awarii i nie odpowiada na zapytania, jednak inne węzły cały czas próbują się z nim skontaktować.
+\end{itemize}
+
+W pierwszym przypadku węzeł można odłączyć przy pomocy procesu którego nazwę autorzy pozwolili sobie przetłumaczyć jako ,,złomowanie'' (\emph{ang.} decommissioning).
+W jego wyniku tokeny złomowanego węzła zostają usunięte z pierścienia, a dane, które się na nim znajdują są transferowane do nowych odpowiadających za nie węzłów.
+
+W praktyce złomowanie węzła sprowadza się do wykonania jednego polecenia za pośrednictwem narzędzia nodetool:
+
+\begin{lstlisting}[style=bash, caption={stan klastra z perspektywy węzła w nim pozostającego}]
+$ nodetool status
+Note: Ownership information does not include topology; for complete information,
+specify a keyspace
+Datacenter: DC1
+===============
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--  Address     Load       Tokens  Owns   Host ID                               Rack
+UN  10.0.0.101  115.51 KB  256     32.8%  d6537c65-2a7a-4359-a451-fdb4c6685b0c  NODE1AND2
+UN  10.0.0.100  154.59 KB  256     35.0%  ac12364d-1ed1-4d8b-b667-0817f75dc065  NODE0
+UN  10.0.0.102  115.33 KB  256     32.2%  ecdf71d2-1a4b-4727-bad6-8e293a0acbe3  NODE1AND2
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=bash, caption={odłączenie węzła \texttt{NODE2}}]
+$ nodetool decommission
+\end{lstlisting}
+
+\begin{lstlisting}[style=bash, caption={stan klastra z perspektywy węzła w nim pozostającego po odłączeniu węzła \texttt{NODE2}}]
+$ nodetool status
+Note: Ownership information does not include topology; for complete information,
+specify a keyspace
+Datacenter: DC1
+===============
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--  Address     Load       Tokens  Owns   Host ID                               Rack
+UN  10.0.0.101  125.02 KB  256     50.7%  d6537c65-2a7a-4359-a451-fdb4c6685b0c  NODE1AND2
+UN  10.0.0.100  154.59 KB  256     49.3%  ac12364d-1ed1-4d8b-b667-0817f75dc065  NODE0
+\end{lstlisting}
+
+\bigskip
+
+\textbf{UWAGA!} Żadne dane nie są usuwane ze złomowanego węzła, więc jeżeli ma on być ponownie wykorzystany w innym miejscu pierścienia, należy wpierw opróżnić jego katalog danych ręcznie.
+
+\bigskip
+
+\bigskip
+
+W drugim przypadku może być potrzebna naprawa klastra po tymczasowej (\emph{ang.} transient) awarii węzła.
+Standardowe mechanizmy zapewniania ostatecznej  spójności są w stanie rozwiązać problemy pojawiające się w takiej sytuacji, z jednym wyjątkiem.
+Gdy awaria trwa dłużej niż wynosi okres życia \emph{tombstonów}, uszkodzony węzeł mógł nie zarejestrować pewnych operacji usunięcia wierszy.
+
+W takim przypadku zaleca się wyczyszczenie węzła (usunięcie zawartości jego katalogu danych), usunięcie związanych z nim tokenów z pierścienia i ponowne dodanie do klastra:
+
+\begin{lstlisting}[style=bash, caption={usuwanie węzła z nieaktualnymi danymi z klastra}]
+$ nodetool describering system_auth #at working node (in this case nodes own one token each)
+Schema Version:93a6afac-9c40-30d0-98a2-7643e5c9cacc
+TokenRange:
+        TokenRange(start_token:-8792352025156691072, end_token:-6642022644930379329,
+        endpoints:[10.0.0.101], rpc_endpoints:[0.0.0.0], endpoint_details:
+        [EndpointDetails(host:10.0.0.101, datacenter:DC1, rack:NODE1AND2)])
+        TokenRange(start_token:-1641540276251868125, end_token:-8792352025156691072,
+        endpoints:[10.0.0.100], rpc_endpoints:[0.0.0.0], endpoint_details:
+        [EndpointDetails(host:10.0.0.100, datacenter:DC1, rack:NODE0)])
+        TokenRange(start_token:-6642022644930379329, end_token:-1641540276251868125,
+        endpoints:[10.0.0.102], rpc_endpoints:[0.0.0.0], endpoint_details:
+        [EndpointDetails(host:10.0.0.102, datacenter:DC1, rack:NODE1AND2)])
+
+$ nodetool status
+Note: Ownership information does not include topology; for complete information,
+specify a keyspace
+Datacenter: DC1
+===============
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--  Address     Load       Tokens  Owns   Host ID                               Rack
+DN  10.0.0.101  70.94 KB   1       0.3%   ca9d75c6-9958-4c1d-a0ea-b9c313edf927  NODE1AND2
+UN  10.0.0.100  57.93 KB   1       61.0%  c8cb08a5-e709-40d5-9ecf-4291c3f44b46  NODE0
+UN  10.0.0.102  71.01 KB   1       38.8%  5ffc18a6-f721-47d4-a43b-1d418ca53050  NODE1AND2
+
+$ nodetool removenode ca9d75c6-9958-4c1d-a0ea-b9c313edf927 #at some working node
+
+$ nodetool describering system_auth #at some other node
+\end{lstlisting}
+
+\bigskip
+
+\textbf{UWAGA!} różnica pomiędzy operacją decommission a removenode jest taka, że druga z nich zakłada że usuwany węzeł nie działa.
+W związku z tym nowe węzły odpowiedzialne za zwalniany zakres tokenów będą pobierały dane z pozostałych w systemie replik, podczas gdy w trakcie złomowania źródłem danych będzie złomowany węzeł.
+
+\bigskip
+
+\bigskip
+
+Wreszcie w przypadku całkowitej awarii węzła znaczącą rolę będzie miało opóźnienie odczytów i zapisów związane z "problemami technicznymi" i/lub niespójność danych.
+
+Gdy każdy z węzłów ma przydzielony tylko jeden token (przydzielany ręcznie), można ten problem rozwiązać następująco
+\begin{enumerate}
+\item[1)] należy zastępczy węzeł odpowiednio przygotować poprzez nadanie mu adresu IP innego niż poprzednikowi i tokenu mniejszego o 1
+\item[2)] podczas przyłączenia do klastra węzeł nie będzie odpowiadał na żądania odczytu aż do momentu zakończenia tego procesu
+\item[3)] po przyłączeniu zastępcy martwy węzeł będzie odpowiadał tylko za jeden token~---~należy go usunąć z pierścienia poleceniem \texttt{nodetool removetoken}
+\item[4)] na każdym z pozostałych węzłów należy wykonać polecenie \texttt{nodetool cleanup}, by uaktualnienia tam zapamiętane z powodu działania mechanizmu \emph{HintedHandoff} niepotrzebnie nie zajmowały miejsca~---~nigdy nie dotrą one do celu ponieważ węzeł, do którego były adresowane został trwale usunięty z klastra
+\end{enumerate}
+
+W przypadku standardowej konfiguracji (wiele tokenów dla pojedynczego węzła, dodatkowo przydzielanych automatycznie), procedura naprawy polega na podłączeniu zastępcy z taki samym adresem IP i uruchomieniu na nim polecenia \texttt{nodetool repair}. Jest to o tyle kłopotliwe, że dla odczytów z żądanym niskim poziomem spójności (np. ONE) węzeł przez okres naprawy (który może być bardzo długi) będzie zwracał klientom informację o braku danych.
 
 \pagebreak
 
