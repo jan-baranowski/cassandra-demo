@@ -5,4 +5,4 @@ Branche:
 * demo/hector - demonstracja działania thriftowego klienta dla Cassandry, np. Hector
 
 Dostęp do maszyn wirtualnych zawierających klaster Cassandry:
-* OVA do uruchomienia na własnym sprzęcie: http://bbsnet.pl/debian-cluster.ova
+* OVA do uruchomienia na własnym sprzęcie: http://bbsnet.pl/debian-cluster-v3.ova
