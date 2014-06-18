@@ -614,11 +614,138 @@ cqlsh>
 
 Oczywiście włączenie uwierzytelniania ma wpływ na wszystkie kanały komunikacji z~klastrem, w~tym na drivery \emph{DataStax}.
 
-\section{Zarządzanie klastrem}
+\section{Zarządzanie klastrem}\label{sec:management}
 
-\subsection{Monitoring węzłów i klastra}
+\subsection{Monitoring węzłów i klastra}\label{sec:management_monitoring}
 
-\subsection{Przyłączanie i odłączanie węzłów}
+Początkowo Cassandra przekazywała szereg statystyk, głównie dot. wydajności (np. opóźnienie odczytów i zapisów, liczba uruchomień procesów kompaktowania struktur danych, użycie pamięci podręcznej, itd.) do systemu monitorowania klastrów Ganglia \cite{facebook_paper} \cite{ganglia}.
+
+Obecnie Cassandra do tego celu wykorzystuje technologię JMX, która może być traktowana jako odpowiednik SNMP dla serwerów pisanych w Javie, dodatkowo wyposażony w mechanizm RPC.
+
+Absolutna większość narzędzi do monitorowania klastrów potrafi komunikować się z agentami JMX (np. Nagios, Munin). Istnieją też konwertery/mosty pomiędzy technologiami, pozwalające odpytywać agenta JMX przez np. REST (JMX-to-REST) czy SNMP (jmx2snmp).
+
+Istnieje też narzędzie pozwalające dodać do Cassandry konsolę WWW wyświetlającą metryki udostępnianie przez agenta.
+
+By dodać taką konsolę do Cassandry należy poprać narzędzie mx4j (\url{http://mx4j.sourceforge.net/}), wypakować zawartość pobranego archiwum, a następnie dodać JARa mx4j-tools.jar do ścieżki systemowej Javy (classpath) definiowanej na potrzeby Cassandry.
+Standardowo by to zrobić, wystarczy skopiować plik mx4j-tools.jar do katalogu.
+
+By zdefiniować adres i port na którym ma nasłuchiwać konsola WWW, należy przekazać dodatkowe parametry do maszyny wirtualnej Java.
+Stąd do pliku /etc/cassandra/cassandra-env.sh należy dopisać następujące linijki:
+
+\begin{lstlisting}[style=bash, caption={konfiguracja \emph{mx4j} dla \emph{Cassandry}}]
+JVM_OPTS="$JVM_OPTS -Dmx4jaddress=0.0.0.0"
+JVM_OPTS="$JVM_OPTS -Dmx4jport=8081"
+\end{lstlisting}
+
+By sprawdzić czy narzędzie zostało załadowane, należy zrestartować usługę cassandra i przeszukać plik logu pod kątem odpowiedniego wpisu.
+Oczywiście można też sprawdzić czy Cassandra nasłuchuje na zdefiniowanym porcie.
+
+\pagebreak
+
+\begin{lstlisting}[style=bash, caption={weryfikacja poprawności działania \emph{mx4j}}]
+$ cat /var/log/cassandra/system.log | grep mx4j
+
+[...]
+
+ INFO [main] 2014-06-18 00:47:06,506 Mx4jTool.java (line 63) mx4j successfuly loaded
+
+$ netstat -ln4p | grep 8081
+tcp        0      0 0.0.0.0:8081            0.0.0.0:*               LISTEN      2651/java
+\end{lstlisting}
+
+\bigskip
+
+Pod tak zdefiniowanym adresem można znaleźć konsolę dającą dostęp do metryk udostępnianych za pośrednictwem JXM:
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{gfx/mx4j-fd}
+\caption{konsola \emph{MX4J}, podgląd stanu detektora awarii w węźle 10.0.0.100}
+\label{fig:mx4j}
+\end{figure}
+
+\pagebreak
+
+\noindent Oczywiście narzędzie nodetool także pozwala wyświetlić parametry pracy węzła:
+
+\begin{lstlisting}[style=bash, columns=fixed, caption={statystyki dla puli wątków z~podziałem na zadania}]
+$ nodetool -host localhost tpstats
+Pool Name             Active Pending Completed Blocked Alltime blocked
+ReadStage                  0       0         2       0               0
+RequestResponseStage       0       0         2       0               0
+MutationStage              0       0       122       0               0
+ReadRepairStage            0       0         0       0               0
+ReplicateOnWriteStage      0       0         0       0               0
+GossipStage                0       0      4236       0               0
+CacheCleanupExecutor       0       0         0       0               0
+MigrationStage             0       0         0       0               0
+MemoryMeter                0       0        13       0               0
+FlushWriter                0       0         8       0               0
+ValidationExecutor         0       0         0       0               0
+InternalResponseStage      0       0         0       0               0
+AntiEntropyStage           0       0         0       0               0
+MemtablePostFlusher        0       0        42       0               0
+MiscStage                  0       0         0       0               0
+PendingRangeCalculator     0       0         5       0               0
+CompactionExecutor         0       0        43       0               0
+commitlog_archiver         0       0         0       0               0
+HintedHandoff              0       0         2       0               0
+
+Message type           Dropped
+RANGE_SLICE                  0
+READ_REPAIR                  0
+PAGED_RANGE                  0
+BINARY                       0
+READ                         0
+MUTATION                     0
+_TRACE                       0
+REQUEST_RESPONSE             0
+COUNTER_MUTATION             0
+\end{lstlisting}
+
+\pagebreak
+
+\begin{lstlisting}[style=bash, caption={statystyki dla przestrzeni kluczy \texttt{system\_auth}}]
+$ nodetool -host localhost cfstats
+
+[...]
+
+Keyspace: system_auth
+	Read Count: 2
+	Read Latency: 43.764 ms.
+	Write Count: 3
+	Write Latency: 49.754 ms.
+	Pending Tasks: 0
+
+[...]
+
+		Table: users
+		SSTable count: 1
+		Space used (live), bytes: 4689
+		Space used (total), bytes: 4689
+		SSTable Compression Ratio: 0.7611940298507462
+		Number of keys (estimate): 128
+		Memtable cell count: 0
+		Memtable data size, bytes: 0
+		Memtable switch count: 1
+		Local read count: 1
+		Local read latency: 0.000 ms
+		Local write count: 1
+		Local write latency: 0.000 ms
+		Pending tasks: 0
+		Bloom filter false positives: 0
+		Bloom filter false ratio: 0.00000
+		Bloom filter space used, bytes: 16
+		Compacted partition minimum bytes: 61
+		Compacted partition maximum bytes: 72
+		Compacted partition mean bytes: 72
+		Average live cells per slice (last five minutes): 1.0
+		Average tombstones per slice (last five minutes): 0.0
+
+----------------
+\end{lstlisting}
+
+\subsection{Przyłączanie i odłączanie węzłów}\label{sec:management_nodepool}
 
 \subsection{Backup danych}
 
