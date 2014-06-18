@@ -1,0 +1,88 @@
+# defining keyspaces
+CREATE KEYSPACE one_replicated WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 1};
+CREATE KEYSPACE two_replicated WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 2};
+SELECT * FROM system.schema_keyspaces;
+
+# for keyspace not replicated
+CREATE TABLE one_replicated.users (id int, name text, surname text, PRIMARY KEY(id, surname)) WITH CLUSTERING ORDER BY (surname ASC) AND read_repair_chance = 0.0;
+
+
+INSERT INTO one_replicated.users(id, name, surname) VALUES (0, 'Jan', 'Kowalski');
+
+# check where Kowalski lives by disabling each node
+CONSISTENCY one;
+SELECT * FROM users; #fails because not all nodes responsible for range are UP
+SELECT * FROM users WHERE id = 0; #may fail for consistency reasons or by RMC timeout (FD not fast enough)
+# when owner is up RPC timeout does not appear which is consistent with accrual FD strategy
+
+INSERT INTO one_replicated.users(id, name, surname) VALUES (1, 'Tomasz', 'Iksiñski'); #ordering should be by surname despite the insertion order
+
+#sorting
+select * from users where ID = 0 order by surname desc;
+
+# for keyspace replicated twice RF=2
+CREATE TABLE two_replicated.strings(string text PRIMARY KEY) WITH read_repair_chance = 0.1;
+
+USE two_replicated;
+
+CONSISTENCY one;
+
+INSERT INTO strings(string) VALUES ('test1');
+INSERT INTO strings(string) VALUES ('test2');
+INSERT INTO strings(string) VALUES ('test3');
+INSERT INTO strings(string) VALUES ('test4');
+INSERT INTO strings(string) VALUES ('test5');
+
+select token(string) from strings where string = 'test5';
+
+# check where test5 lives using nodetool getendpoints two_replicated strings 'test5'
+
+# are they in proper order?
+
+# inserts probably went to node1 because it was nearest try querying node2:
+
+consistency one;
+select * from two_replicated.strings;
+
+# more advanced tests for three_replicated
+
+# create table at node #0
+USE two_replicated;
+CREATE TABLE map (key int PRIMARY KEY, value text) WITH read_repair_chance = 0.0;
+consistency ONE;
+insert into map (key, value) values (0, 'version1');
+
+
+# disable 0 wait for ack @2, and at node #2:
+USE two_replicated;
+consistency ONE;
+update map set value = 'version2' where key = 0;
+select value from map where key = 0;
+
+#disable #1, wait for ack at 2 then enable #0, wait for ack at 2 and at node #2
+USE two_replicated;
+consistency ONE;
+select value from map where key = 0;
+
+# at #2 result should be obsolete (unless hinted handoff is enabled)
+select value from map where key = 0;
+
+# enable #1
+select value from map where key = 0; # now #1 would be queried
+
+# disable #1
+select value from map where key = 0; # results still obsolete
+
+# now switch to more consistent state
+consistency all
+select value from map where key = 0; # should produce an error
+
+# enable #1, enable read-repair
+alter table map with read_repair_chance = 1.0;
+select value from map where key = 0; # a few times
+
+# disable #1 and check if #0 was repaired
+consistency one
+select value from map where key = 0; # at #3 result should now be OK
+
+
