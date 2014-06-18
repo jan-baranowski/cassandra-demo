@@ -618,27 +618,28 @@ Oczywiście włączenie uwierzytelniania ma wpływ na wszystkie kanały komunika
 
 \subsection{Monitoring węzłów i klastra}\label{sec:management_monitoring}
 
-Początkowo Cassandra przekazywała szereg statystyk, głównie dot. wydajności (np. opóźnienie odczytów i zapisów, liczba uruchomień procesów kompaktowania struktur danych, użycie pamięci podręcznej, itd.) do systemu monitorowania klastrów Ganglia \cite{facebook_paper} \cite{ganglia}.
+Początkowo \emph{Cassandra} przekazywała szereg statystyk, głównie dot. wydajności (np. opóźnienie odczytów i~zapisów, liczba uruchomień procesów kompaktowania struktur danych, użycie pamięci podręcznej, itd.) do systemu monitorowania klastrów \emph{Ganglia} \cite{facebook_paper} \cite{ganglia}.
 
-Obecnie Cassandra do tego celu wykorzystuje technologię JMX, która może być traktowana jako odpowiednik SNMP dla serwerów pisanych w Javie, dodatkowo wyposażony w mechanizm RPC.
+Obecnie \emph{Cassandra} do tego celu wykorzystuje technologię \emph{JMX}, która może być traktowana jako odpowiednik \emph{SNMP} dla serwerów pisanych w~\emph{Javie}, dodatkowo wyposażony w~mechanizm RPC.
 
-Absolutna większość narzędzi do monitorowania klastrów potrafi komunikować się z agentami JMX (np. Nagios, Munin). Istnieją też konwertery/mosty pomiędzy technologiami, pozwalające odpytywać agenta JMX przez np. REST (JMX-to-REST) czy SNMP (jmx2snmp).
+Absolutna większość narzędzi do monitorowania klastrów potrafi komunikować się z~agentami \emph{JMX} (np. \emph{Nagios}, \emph{Munin}).
+Istnieją też konwertery/mosty pomiędzy technologiami, pozwalające odpytywać agenta \emph{JMX} przez np. REST (\emph{JMX-to-REST}, \url{http://code.google.com/p/polarrose-jmx-rest-bridge/}) czy \emph{SNMP} (\emph{jmx2snmp}, \url{https://github.com/tcurdt/jmx2snmp}).
 
-Istnieje też narzędzie pozwalające dodać do Cassandry konsolę WWW wyświetlającą metryki udostępnianie przez agenta.
+Istnieje też narzędzie pozwalające dodać do \emph{Cassandry} konsolę WWW wyświetlającą metryki udostępnianie przez agenta.
 
-By dodać taką konsolę do Cassandry należy poprać narzędzie mx4j (\url{http://mx4j.sourceforge.net/}), wypakować zawartość pobranego archiwum, a następnie dodać JARa mx4j-tools.jar do ścieżki systemowej Javy (classpath) definiowanej na potrzeby Cassandry.
-Standardowo by to zrobić, wystarczy skopiować plik mx4j-tools.jar do katalogu.
+By dodać taką konsolę należy poprać narzędzie \emph{MX4J} (\url{http://mx4j.sourceforge.net/}), wypakować zawartość pobranego archiwum, a~następnie dodać archiwum \texttt{mx4j-tools.jar} do ścieżki systemowej \emph{Javy} (\emph{classpath}) definiowanej na potrzeby \emph{Cassandry}.
+Standardowo by to zrobić, wystarczy skopiować plik \texttt{mx4j-tools.jar} do katalogu \texttt{/usr/share/cassandra/lib/}.
 
-By zdefiniować adres i port na którym ma nasłuchiwać konsola WWW, należy przekazać dodatkowe parametry do maszyny wirtualnej Java.
-Stąd do pliku /etc/cassandra/cassandra-env.sh należy dopisać następujące linijki:
+By zdefiniować adres i~port na którym ma nasłuchiwać konsola WWW, należy przekazać dodatkowe parametry do maszyny wirtualnej.
+Stąd do pliku \texttt{/etc/cassandra/cassandra-env.sh} należy dopisać następujące linijki:
 
 \begin{lstlisting}[style=bash, caption={konfiguracja \emph{mx4j} dla \emph{Cassandry}}]
 JVM_OPTS="$JVM_OPTS -Dmx4jaddress=0.0.0.0"
 JVM_OPTS="$JVM_OPTS -Dmx4jport=8081"
 \end{lstlisting}
 
-By sprawdzić czy narzędzie zostało załadowane, należy zrestartować usługę cassandra i przeszukać plik logu pod kątem odpowiedniego wpisu.
-Oczywiście można też sprawdzić czy Cassandra nasłuchuje na zdefiniowanym porcie.
+By sprawdzić czy narzędzie zostało załadowane, należy zrestartować usługę \texttt{cassandra} i~przeszukać plik logu pod kątem odpowiedniego wpisu.
+Oczywiście można też sprawdzić czy \emph{Cassandra} nasłuchuje na odpowiednim porcie.
 
 \pagebreak
 
@@ -655,7 +656,7 @@ tcp        0      0 0.0.0.0:8081            0.0.0.0:*               LISTEN      
 
 \bigskip
 
-Pod tak zdefiniowanym adresem można znaleźć konsolę dającą dostęp do metryk udostępnianych za pośrednictwem JXM:
+Pod tak zdefiniowanym adresem można znaleźć konsolę dającą dostęp do metryk udostępnianych za pośrednictwem \emph{JMX}:
 
 \begin{figure}[h]
 \centering
@@ -666,7 +667,7 @@ Pod tak zdefiniowanym adresem można znaleźć konsolę dającą dostęp do metr
 
 \pagebreak
 
-\noindent Oczywiście narzędzie nodetool także pozwala wyświetlić parametry pracy węzła:
+\noindent Oczywiście narzędzie \texttt{nodetool} także pozwala wyświetlić parametry pracy węzła:
 
 \begin{lstlisting}[style=bash, columns=fixed, caption={statystyki dla puli wątków z~podziałem na zadania}]
 $ nodetool -host localhost tpstats
@@ -747,54 +748,65 @@ Keyspace: system_auth
 
 \subsection{Przyłączanie i odłączanie węzłów}\label{sec:management_nodepool}
 
-\subsection{Backup danych}
+
 
 \pagebreak
 
 \begin{thebibliography}{10}%===================================================
 
-\bibitem[1]{prezentacja_srds}
+\bibitem[1]{facebook_paper}
+A. Lakchman, P. Malik,\\
+\emph{Cassandra~---~A~Decentralized Structured Storage System},\\
+ACM SIGOPS Operating Systems Review,\\
+Volume 44 Issue 2, April 2010
+
+\bibitem[2]{prezentacja_srds}
 Jan Baranowski, Michał Kaik, Maciej Urbański,\\
 \emph{Cassandra, Highly available, scalable storage system},\\
 Politechnika Poznańska 2014
 
-\bibitem[2]{definitiveguide}
+\bibitem[3]{definitiveguide}
 E. Hewitt,\\
 \emph{Cassandra, The Defintive Guide},\\
 O'Reilly 2010
 
-\bibitem[3]{datastax}
+\bibitem[4]{datastax}
 \emph{DataStax},\\
 \url{http://www.datastax.com/},\\
 dostęp 17 czerwca 2014 r.
 
-\bibitem[4]{distributeddeletes}
+\bibitem[5]{distributeddeletes}
 \emph{DistributedDeletes, Cassandra Wiki},\\
 \url{http://wiki.apache.org/cassandra/DistributedDeletes}\\
 dostęp 17 czerwca 2014 r.
 
-\bibitem[5]{downloading_oracle_java}
+\bibitem[6]{ganglia}
+\emph{Ganglia Monitoring System},
+\url{http://ganglia.sourceforge.net/}\\
+dostęp 18 czerwca 2014 r.
+
+\bibitem[7]{downloading_oracle_java}
 Daniel Stavrovski,\\
 \emph{Installing Oracle JAVA 7 on Debian Wheezy},\\
 \url{http://d.stavrovski.net/blog/post/installing-oracle-java-7-on-debian-wheezy},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[6]{installing_oracle_java_on_debian}
+\bibitem[8]{installing_oracle_java_on_debian}
 \emph{Java/Sun, Debian Wiki},\\
 \url{https://wiki.debian.org/Java/Sun},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[7]{mysql_connectors}
+\bibitem[9]{mysql_connectors}
 \emph{MySQL Connectors},\\
 \url{http://www.mysql.com/products/connector/},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[8]{datastax_guides}
+\bibitem[10]{datastax_guides}
 \emph{NoSQL Apache Cassandra Documentation},\\
 \url{http://planetcassandra.org/documentation/},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[9]{whydatastax}
+\bibitem[11]{whydatastax}
 \emph{Why DataStax?},\\
 \url{http://www.datastax.com/why-datastax}\\
 dostęp 16 czerwca 2014 r.
