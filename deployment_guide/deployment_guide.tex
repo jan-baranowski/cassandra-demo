@@ -39,7 +39,7 @@
 
 \begin{document} %=============================================================
 
-\title{Apache Cassandra 2.0\\vspace{2ex}Przewodnik instalacji i konfiguracji w systemie Debian Wheezy}
+\title{Apache Cassandra 2.0\\\vspace{2ex}Przewodnik instalacji i konfiguracji w systemie Debian Wheezy\\\vspace{3ex}}
 \author{Jan Baranowski, Michał Kaik\\Politechnika Poznańska}
 
 \maketitle
@@ -328,6 +328,8 @@ Status=Up/Down
 UN  127.0.0.1  98.76 KB   256     100.0%            d85efd66-29fb-46d7-b824-a4cc3fc4e75b  rack1
 \end{lstlisting}
 
+\pagebreak
+
 \section{Konfiguracja klastra}\label{sec:cluster}
 
 \subsection{Łączenie węzłów w klaster}\label{subsec:cluster_connecting}
@@ -545,8 +547,6 @@ $ crontab -u root -l
 Spowoduje to naprawę jedynie tych zakresów kluczy dla których węzeł jest \emph{master replik}ą (pomijając zakresy ulokowane w~węźle przez mechanizm replikacji~---~standardowe repliki).
 
 \noindent\textbf{UWAGA!} Synchronizacja replik na żądanie spowoduje automatycznie usunięcie wszystkich \emph{tombstonów} związanych z~replikowaną rodziną kolumn, ponieważ po synchronizacji nie są one już potrzebne.
-
-\pagebreak
 
 \subsubsection{Konfiguracja uwierzytelniania}\label{subsec:cluster_misc_auth}
 
