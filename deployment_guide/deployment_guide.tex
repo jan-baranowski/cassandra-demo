@@ -749,24 +749,24 @@ Keyspace: system_auth
 ----------------
 \end{lstlisting}
 
-\subsection{Przyłączanie i odłączanie węzłów}\label{sec:management_nodepool}
+\subsection{Przyłączanie i~odłączanie węzłów}\label{sec:management_nodepool}
 
-By dołączyć do klastra nowy węzeł w celu odciążenia pozostałych, należy wykonać procedurę analogiczną do opisanej w punkcie \ref{subsec:cluster_connecting}.
-Istnieje możliwość wyspecyfikowania w pliku konfiguracyjnym za ile tokenów (a nawet za jakie dokładnie) nowy węzeł będzie odpowiedzialny, ale nawet bez takiej informacji węzeł będzie w stanie skutecznie odciążyć klaster, ponieważ dzięki gossippingowi ma bezpośredni wgląd w stan wszystkich innych węzłów.
+By dodać do klastra nowy węzeł w~celu odciążenia pozostałych, należy wykonać procedurę analogiczną do opisanej w~punkcie \ref{subsec:cluster_connecting}.
+Istnieje możliwość wyspecyfikowania w~pliku konfiguracyjnym za ile tokenów (a~nawet za jakie dokładnie) nowy węzeł będzie odpowiedzialny, ale nawet bez takiej informacji nowy węzeł będzie w~stanie skutecznie odciążyć klaster, ponieważ dzięki gossippingowi ma wgląd w~stan wszystkich innych węzłów.
 
 Powodów by odłączyć węzeł może być kilka:
 \begin{itemize}
-\item klaster podlega aktualnie skalowaniu "w dół" i zbędne węzły są usuwane, choć cały czas działają prawidłowo
-\item węzeł działa, choć niestabilnie. Jest spora szansa na to, że w najbliższym czasie ulegnie awarii, powinien więc być zastąpiony nowym.
-\item węzeł już uległ awarii i nie odpowiada na zapytania, jednak inne węzły cały czas próbują się z nim skontaktować.
+\item klaster podlega aktualnie skalowaniu ,,w dół'' i~zbędne węzły są usuwane, choć cały czas działają prawidłowo
+\item węzeł działa, choć niestabilnie~---~est spora szansa na to, że w najbliższym czasie ulegnie awarii, powinien więc być zastąpiony nowym
+\item węzeł już uległ awarii i~nie odpowiada na zapytania, jednak inne węzły cały czas próbują się z~nim kontaktować
 \end{itemize}
 
-W pierwszym przypadku węzeł można odłączyć przy pomocy procesu którego nazwę autorzy pozwolili sobie przetłumaczyć jako ,,złomowanie'' (\emph{ang.} decommissioning).
-W jego wyniku tokeny złomowanego węzła zostają usunięte z pierścienia, a dane, które się na nim znajdują są transferowane do nowych odpowiadających za nie węzłów.
+W~pierwszym przypadku węzeł można odłączyć przy pomocy procesu którego nazwę autorzy pozwolili sobie przetłumaczyć jako ,,złomowanie'' (\emph{ang.} decommissioning).
+W~jego wyniku tokeny złomowanego węzła zostają usunięte z~pierścienia, a~dane, które się na nim znajdują są transferowane do nowych odpowiedzialnych za nie węzłów.
 
-W praktyce złomowanie węzła sprowadza się do wykonania jednego polecenia za pośrednictwem narzędzia nodetool:
+W~praktyce złomowanie węzła sprowadza się do wykonania jednego polecenia za pośrednictwem narzędzia \texttt{nodetool}:
 
-\begin{lstlisting}[style=bash, caption={stan klastra z perspektywy węzła w nim pozostającego}]
+\begin{lstlisting}[style=bash, caption={stan klastra z~perspektywy węzła w~nim pozostającego}]
 $ nodetool status
 Note: Ownership information does not include topology; for complete information,
 specify a keyspace
@@ -780,12 +780,11 @@ UN  10.0.0.100  154.59 KB  256     35.0%  ac12364d-1ed1-4d8b-b667-0817f75dc065  
 UN  10.0.0.102  115.33 KB  256     32.2%  ecdf71d2-1a4b-4727-bad6-8e293a0acbe3  NODE1AND2
 \end{lstlisting}
 
-
-\begin{lstlisting}[style=bash, caption={odłączenie węzła \texttt{NODE2}}]
+\begin{lstlisting}[style=bash, caption={odłączenie węzła \texttt{NODE2}/10.0.0.102}]
 $ nodetool decommission
 \end{lstlisting}
 
-\begin{lstlisting}[style=bash, caption={stan klastra z perspektywy węzła w nim pozostającego po odłączeniu węzła \texttt{NODE2}}]
+\begin{lstlisting}[style=bash, caption={stan klastra z~perspektywy węzła w~nim pozostającego po odłączeniu węzła \texttt{NODE2}}]
 $ nodetool status
 Note: Ownership information does not include topology; for complete information,
 specify a keyspace
@@ -800,69 +799,79 @@ UN  10.0.0.100  154.59 KB  256     49.3%  ac12364d-1ed1-4d8b-b667-0817f75dc065  
 
 \bigskip
 
-\textbf{UWAGA!} Żadne dane nie są usuwane ze złomowanego węzła, więc jeżeli ma on być ponownie wykorzystany w innym miejscu pierścienia, należy wpierw opróżnić jego katalog danych ręcznie.
+\noindent\textbf{UWAGA!} Żadne dane nie są usuwane ze złomowanego węzła, więc jeżeli ma on być ponownie wykorzystany w~innym miejscu pierścienia (z innym tokenem), należy wpierw opróżnić jego katalog danych ręcznie.
 
 \bigskip
 
-\bigskip
-
-W drugim przypadku może być potrzebna naprawa klastra po tymczasowej (\emph{ang.} transient) awarii węzła.
-Standardowe mechanizmy zapewniania ostatecznej  spójności są w stanie rozwiązać problemy pojawiające się w takiej sytuacji, z jednym wyjątkiem.
+W~drugim przypadku może być potrzebna naprawa klastra po tymczasowej (\emph{ang.} transient) awarii węzła.
+Standardowe mechanizmy zapewniania ostatecznej spójności są w~stanie rozwiązać problemy pojawiające się w~takiej sytuacji, z~jednym wyjątkiem.
 Gdy awaria trwa dłużej niż wynosi okres życia \emph{tombstonów}, uszkodzony węzeł mógł nie zarejestrować pewnych operacji usunięcia wierszy.
 
-W takim przypadku zaleca się wyczyszczenie węzła (usunięcie zawartości jego katalogu danych), usunięcie związanych z nim tokenów z pierścienia i ponowne dodanie do klastra:
+Wtedy zaleca się wyczyszczenie węzła (usunięcie zawartości jego katalogu danych), usunięcie związanych z~nim tokenów z~pierścienia i~ponowne dodanie do klastra:
 
-\begin{lstlisting}[style=bash, caption={usuwanie węzła z nieaktualnymi danymi z klastra}]
-$ nodetool describering system_auth #at working node (in this case nodes own one token each)
-Schema Version:93a6afac-9c40-30d0-98a2-7643e5c9cacc
-TokenRange:
-        TokenRange(start_token:-8792352025156691072, end_token:-6642022644930379329,
-        endpoints:[10.0.0.101], rpc_endpoints:[0.0.0.0], endpoint_details:
-        [EndpointDetails(host:10.0.0.101, datacenter:DC1, rack:NODE1AND2)])
-        TokenRange(start_token:-1641540276251868125, end_token:-8792352025156691072,
-        endpoints:[10.0.0.100], rpc_endpoints:[0.0.0.0], endpoint_details:
-        [EndpointDetails(host:10.0.0.100, datacenter:DC1, rack:NODE0)])
-        TokenRange(start_token:-6642022644930379329, end_token:-1641540276251868125,
-        endpoints:[10.0.0.102], rpc_endpoints:[0.0.0.0], endpoint_details:
-        [EndpointDetails(host:10.0.0.102, datacenter:DC1, rack:NODE1AND2)])
+\pagebreak
+
+\begin{lstlisting}[style=bash, caption={usuwanie węzła z~nieaktualnymi danymi z~klastra}]
+$ nodetool ring
+
+Datacenter: DC1
+==========
+Address     Rack      Status State   Load     Owns    Token
+                                                      4960255647790084904
+10.0.0.100  NODE0     Up     Normal  35.91 KB 81.40%  -8739202312123959326
+10.0.0.101  NODE1AND2 Down     Normal  35.88 KB 44.33%  -5308254802912860692
+10.0.0.102  NODE1AND2 Up     Normal  35.92 KB 74.26%  4960255647790084904
 
 $ nodetool status
-Note: Ownership information does not include topology; for complete information,
-specify a keyspace
 Datacenter: DC1
 ===============
 Status=Up/Down
 |/ State=Normal/Leaving/Joining/Moving
---  Address     Load       Tokens  Owns   Host ID                               Rack
-DN  10.0.0.101  70.94 KB   1       0.3%   ca9d75c6-9958-4c1d-a0ea-b9c313edf927  NODE1AND2
-UN  10.0.0.100  57.93 KB   1       61.0%  c8cb08a5-e709-40d5-9ecf-4291c3f44b46  NODE0
-UN  10.0.0.102  71.01 KB   1       38.8%  5ffc18a6-f721-47d4-a43b-1d418ca53050  NODE1AND2
+--  Address     Load       Tokens  Owns (effective)  Host ID                               Rack
+DN  10.0.0.101  35.88 KB   1       44.3%             f329244e-c4ac-4fb0-8343-4476d97a311f  NODE1AND2
+UN  10.0.0.100  35.91 KB   1       81.4%             ae935af3-d6b9-433a-a359-a6ef623340fe  NODE0
+UN  10.0.0.102  35.92 KB   1       74.3%             b5c8225f-aff8-4e7d-9d82-221dc113adad  NODE1AND2
 
-$ nodetool removenode ca9d75c6-9958-4c1d-a0ea-b9c313edf927 #at some working node
+$ nodetool removenode f329244e-c4ac-4fb0-8343-4476d97a311f
 
-$ nodetool describering system_auth #at some other node
+$ nodetool status
+Datacenter: DC1
+===============
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--  Address     Load       Tokens  Owns (effective)  Host ID                               Rack
+UN  10.0.0.100  35.91 KB   1       100.0%            ae935af3-d6b9-433a-a359-a6ef623340fe  NODE0
+UN  10.0.0.102  35.92 KB   1       100.0%            b5c8225f-aff8-4e7d-9d82-221dc113adad  NODE1AND2
+
+$ nodetool ring
+
+Datacenter: DC1
+==========
+Address     Rack      Status State  Load     Owns    Token
+                                                     4960255647790084904
+10.0.0.100  NODE0     Up     Normal 35.91 KB 100.00% -8739202312123959326
+10.0.0.102  NODE1AND2 Up     Normal 35.92 KB 100.00% 4960255647790084904
 \end{lstlisting}
 
 \bigskip
 
-\textbf{UWAGA!} różnica pomiędzy operacją decommission a removenode jest taka, że druga z nich zakłada że usuwany węzeł nie działa.
-W związku z tym nowe węzły odpowiedzialne za zwalniany zakres tokenów będą pobierały dane z pozostałych w systemie replik, podczas gdy w trakcie złomowania źródłem danych będzie złomowany węzeł.
+\noindent\textbf{UWAGA!} Różnica pomiędzy operacją \texttt{decommission} a~\texttt{removenode} jest taka, że druga z~nich zakłada że usuwany węzeł nie działa.
+W~związku z~tym nowe węzły odpowiedzialne za zwalniany zakres tokenów będą pobierały dane z~pozostałych w~systemie replik, podczas gdy w~trakcie złomowania źródłem danych będzie złomowany węzeł.
 
 \bigskip
 
-\bigskip
+Wreszcie w~przypadku całkowitej awarii węzła znaczącą rolę będzie miało opóźnienie odczytów i~zapisów związane z~,,problemami technicznymi'' i/lub niespójność danych.
 
-Wreszcie w przypadku całkowitej awarii węzła znaczącą rolę będzie miało opóźnienie odczytów i zapisów związane z "problemami technicznymi" i/lub niespójność danych.
-
-Gdy każdy z węzłów ma przydzielony tylko jeden token (przydzielany ręcznie), można ten problem rozwiązać następująco
+Gdy każdy z~węzłów ma przydzielony tylko jeden token (przydzielany ręcznie), można ten problem rozwiązać następująco:
 \begin{enumerate}
-\item[1)] należy zastępczy węzeł odpowiednio przygotować poprzez nadanie mu adresu IP innego niż poprzednikowi i tokenu mniejszego o 1
+\item[1)] należy zastępczy węzeł odpowiednio przygotować poprzez nadanie mu adresu IP innego niż poprzednikowi i~tokenu mniejszego o~1 od tokenu poprzednika
 \item[2)] podczas przyłączenia do klastra węzeł nie będzie odpowiadał na żądania odczytu aż do momentu zakończenia tego procesu
-\item[3)] po przyłączeniu zastępcy martwy węzeł będzie odpowiadał tylko za jeden token~---~należy go usunąć z pierścienia poleceniem \texttt{nodetool removetoken}
-\item[4)] na każdym z pozostałych węzłów należy wykonać polecenie \texttt{nodetool cleanup}, by uaktualnienia tam zapamiętane z powodu działania mechanizmu \emph{HintedHandoff} niepotrzebnie nie zajmowały miejsca~---~nigdy nie dotrą one do celu ponieważ węzeł, do którego były adresowane został trwale usunięty z klastra
+\item[3)] po przyłączeniu zastępcy martwy węzeł będzie odpowiadał tylko za jeden token~---~należy go usunąć z~pierścienia poleceniem \texttt{nodetool removetoken}
+\item[4)] na każdym z~pozostałych węzłów należy wykonać polecenie \texttt{nodetool cleanup}, by uaktualnienia tam zapamiętane w~efekcie działania mechanizmu \emph{HintedHandoff} niepotrzebnie nie zajmowały miejsca~---~nigdy nie dotrą one do celu ponieważ węzeł, do którego były adresowane został trwale usunięty z~klastra
 \end{enumerate}
 
-W przypadku standardowej konfiguracji (wiele tokenów dla pojedynczego węzła, dodatkowo przydzielanych automatycznie), procedura naprawy polega na podłączeniu zastępcy z taki samym adresem IP i uruchomieniu na nim polecenia \texttt{nodetool repair}. Jest to o tyle kłopotliwe, że dla odczytów z żądanym niskim poziomem spójności (np. ONE) węzeł przez okres naprawy (który może być bardzo długi) będzie zwracał klientom informację o braku danych.
+W~przypadku standardowej konfiguracji (wiele tokenów dla pojedynczego węzła, dodatkowo przydzielanych automatycznie), procedura naprawy polega na podłączeniu zastępcy z~takim samym adresem IP i~uruchomieniu na nim polecenia \texttt{nodetool repair}.
+Jest to o tyle kłopotliwe, że dla odczytów z~żądanym niskim poziomem spójności (np. ONE) węzeł przez okres naprawy (który może być bardzo długi) będzie zwracał klientom informację o~braku danych.
 
 \pagebreak
 
@@ -889,38 +898,58 @@ O'Reilly 2010
 \url{http://www.datastax.com/},\\
 dostęp 17 czerwca 2014 r.
 
-\bibitem[5]{distributeddeletes}
+\bibitem[5]{debian_packaging}
+\emph{DebianPackaging, Cassandra Wiki},\\
+\url{https://wiki.apache.org/cassandra/DebianPackaging}.\\
+dostęp 16 czerwca 2014 r.
+
+\bibitem[6]{distributeddeletes}
 \emph{DistributedDeletes, Cassandra Wiki},\\
 \url{http://wiki.apache.org/cassandra/DistributedDeletes}\\
 dostęp 17 czerwca 2014 r.
 
-\bibitem[6]{ganglia}
+\bibitem[7]{ganglia}
 \emph{Ganglia Monitoring System},
 \url{http://ganglia.sourceforge.net/}\\
 dostęp 18 czerwca 2014 r.
 
-\bibitem[7]{downloading_oracle_java}
+\bibitem[8]{getting_started}
+\emph{GettingStarted, Cassandra Wiki},\\
+\url{http://wiki.apache.org/cassandra/GettingStarted},\\
+dostęp 16 czerwca 2014 r.
+
+\bibitem[9]{downloading_oracle_java}
 Daniel Stavrovski,\\
 \emph{Installing Oracle JAVA 7 on Debian Wheezy},\\
 \url{http://d.stavrovski.net/blog/post/installing-oracle-java-7-on-debian-wheezy},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[8]{installing_oracle_java_on_debian}
+\bibitem[10]{installing_oracle_java_on_debian}
 \emph{Java/Sun, Debian Wiki},\\
 \url{https://wiki.debian.org/Java/Sun},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[9]{mysql_connectors}
+\bibitem[11]{mysql_connectors}
 \emph{MySQL Connectors},\\
 \url{http://www.mysql.com/products/connector/},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[10]{datastax_guides}
+\bibitem[12]{datastax_guides}
 \emph{NoSQL Apache Cassandra Documentation},\\
 \url{http://planetcassandra.org/documentation/},\\
 dostęp 16 czerwca 2014 r.
 
-\bibitem[11]{whydatastax}
+\bibitem[13]{ntp}
+\emph{NTP, Debian Wiki},\\
+\url{https://wiki.debian.org/NTP},\\
+dostęp 16 czerwca 2014 r.
+
+\bibitem[14]{cluster_operations}
+\emph{Operations, Cassandra Wiki},\\
+\url{http://wiki.apache.org/cassandra/Operations},\\
+dostęp 16 czerwca 2014 r.
+
+\bibitem[15]{whydatastax}
 \emph{Why DataStax?},\\
 \url{http://www.datastax.com/why-datastax}\\
 dostęp 16 czerwca 2014 r.
